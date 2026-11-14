@@ -40,6 +40,7 @@ This document is the authoritative specification for calculating, simulating, an
     - **Deer (Small Hunt):** `4` villagers (up to `6` max for short periods)
     - **Chicken:** `2` villagers (up to `4` max for short periods)
   - Up to **+2 extra villagers** beyond the ideal number are permitted for short periods to avoid slaughtering a second animal early and incurring double rot.
+  - Never slaughter a new sheep while a boar carcass is already open under the TC (shepherds finishing their current sheep must immediately switch onto the active boar).
   - A small amount of additional rot is acceptable if it leads to macro efficiencies elsewhere.
 - **Carried Resources on Re-tasking:**
   - Villagers do not lose carried resources when re-tasked at the TC or upon completing a drop-off camp.
@@ -52,14 +53,18 @@ This document is the authoritative specification for calculating, simulating, an
   - Automatically include **Double-Bit Axe** (`100F, 50W, 25s`) upon reaching Feudal Age and **Bow Saw** (`150F, 100W, 50s`) upon reaching Castle Age.
   - Automatically include **Horse Collar** (`75F, 75W, 20s`) before seeding heavy farms (unless executing a tight all-in build).
 
-### 1.4 Required Output Formats
-For every requested build order, generate:
-1. **Detailed HTML Build Order Report (`.html`):**
-   - **Sectioned Villager-by-Villager Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, etc.) with columns `Pop | Timestamp | Villager Assignment / Action | Food Villagers Breakdown (Sheep / Boar / Deer/Chk / Berries / Farms / Total F) | Other Vils (W/G/S) | Resource Bank (F/W/G/S) | Notes / Buildings`
+### 1.4 Required Output Formats & Directory Layout
+For every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
+1. **Build-Specific Python Scripts (`sim_<build_slug>.py`, `generate_<build_slug>.py`):**
+   - Placed directly inside `builds/<build_slug>/` next to the output files.
+2. **Detailed HTML Build Order Report (`<build_slug>.html`):**
+   - **Top-Level Tab Views:** Present the map variants (e.g., `3 Deer Pushed`, `8 Chickens Milled`, `6 Chickens Long-Distance`) as top-level tabs.
+   - **Sectioned Villager-by-Villager Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, etc.) with columns `Pop | Timestamp | Villager Assignment / Action | Food Villagers Breakdown (Sheep / Boar / Deer/Chk / Berries / Farms / Total F) | Other Vils (W/G/S) | Resource Bank (F/W/G/S) | Notes / Buildings`.
    - **Age-Up Transition Reallocations & Queues**
    - **Steady-State Target Summary & Rot/Efficiency Telemetry**
-2. **RTS Overlay Compatible JSON (`.json`):**
+3. **RTS Overlay Compatible JSON (`.json`):**
    - Follows the `RTS_Overlay` / `AoE Overlay` schema (`name`, `civilization`, `author`, `source`, `description`, `build_order` array of `{villager_count, age, resources: {wood, food, gold, stone}, notes}` using `@category/icon@` asset tags).
+   - Every step must satisfy `sum(resources.values()) == villager_count`.
 
 ---
 
