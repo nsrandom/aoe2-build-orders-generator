@@ -61,6 +61,7 @@ def run_dravidians_maa_variant(
 
     def record_timeline_point() -> None:
         from exporters import format_army_counts
+        army_d = current_army_dict()
         resource_timeline.append(
             {
                 "t": sim.time_s,
@@ -69,7 +70,9 @@ def run_dravidians_maa_variant(
                 "wood": round(sim.bank.wood),
                 "gold": round(sim.bank.gold),
                 "stone": round(sim.bank.stone),
-                "army": format_army_counts(current_army_dict()),
+                "vils": len(sim.vils),
+                "mil": sum(army_d.values()),
+                "army": format_army_counts(army_d),
             }
         )
 

@@ -6,9 +6,10 @@ This document defines the required output file structure, shared CSS architectur
 
 ## 1. Directory Layout & Shared Assets
 
-### 1.1 Shared Stylesheet (`styles/build_order.css`)
+### 1.1 Shared Stylesheet & Standard AoE2 Resource Icons (`styles/`)
 - All reusable styling across build order HTML guides resides in `/Users/asif/Projects/aoe/build-orders/gemini/styles/build_order.css`.
-- Generated HTML files MUST link to this shared stylesheet via relative path (`<link rel="stylesheet" href="../../styles/build_order.css">`) rather than embedding duplicate `<style>` blocks or static inline styles.
+- Standard AoE2:DE resource icons reside in `/Users/asif/Projects/aoe/build-orders/gemini/styles/icons/` (`food.png`, `wood.png`, `gold.png`, `stone.png`) and are used in place of plain `F/W/G/S` suffixes across table headers, `Resource Bank` cells, inline building/tech costs, telemetry cards, and chart readouts.
+- Generated HTML files MUST link to `../../styles/build_order.css` and `../../styles/icons/*.png` via relative paths rather than embedding duplicate `<style>` blocks or static inline styles.
 
 ### 1.2 Per-Build Directory (`builds/<build_slug>/`)
 Every build order resides in its own dedicated directory `/Users/asif/Projects/aoe/build-orders/gemini/builds/<build_slug>/` containing:
@@ -47,21 +48,24 @@ Because build order guides can be long, **every section inside each variant tab 
 ### 2.4 Interactive Resources Bank Over Time Chart
 - Each variant tab includes a collapsible **Resources Bank Over Time** section containing a responsive inline `<svg class="resource-chart-svg">` chart:
   - **Series:** Plots `Food`, `Wood`, `Gold`, and `Stone` stockpiles from `00:00` through the end of the build using `doc.resource_timeline` (sampled every `10s` plus every build row event, or extracted automatically from `doc.rows`).
-  - **Age Milestone Markers:** Vertical dashed lines mark key age-click and age-arrival timestamps (`Feudal Click`, `Feudal Age`, `Castle Click`, `Castle Age`, `Imp Click`, `Imp Age`).
-  - **Interactive Controls:** Series checkboxes toggle `Food`, `Wood`, `Gold`, and `Stone` curves on/off, and hovering over the chart moves a vertical crosshair and displays the exact `MM:SS`, `Food / Wood / Gold / Stone` stockpile, and `Army` count by type.
+  - **Staggered Age Milestone Markers:** Vertical dashed lines mark key age-click and age-arrival timestamps (`Feudal Click`, `Feudal Age`, `Castle Click`, `Castle Age`, `Imp Click`, `Imp Age`), with labels arranged across 4 vertical lanes (`y = 20, 38, 56, 74`) using collision detection so adjacent milestone labels never overlap horizontally.
+  - **Three Stacked Control & Readout Rows (`.chart-controls`):**
+    1. **Row 1 (`.chart-legend`):** Checkboxes to toggle `Food`, `Wood`, `Gold`, and `Stone` curves on/off, accompanied by standard AoE2 resource icons (`food.png`, `wood.png`, `gold.png`, `stone.png`).
+    2. **Row 2 (`#res-chart-X-readout` / `.chart-readout`):** Always placed on its own dedicated line below `.chart-legend` so it never shifts up and down as text length changes; displays `Time: MM:SS` and exact `Food · Wood · Gold · Stone` stockpiles with standard AoE2 resource icons.
+    3. **Row 3 (`#res-chart-X-pop-readout` / `.chart-pop-readout`):** Placed on its own dedicated line directly below `#res-chart-X-readout`; displays **Total Vils & Military Counts**, followed by **Military Distribution** by unit type (e.g., `Total Vils: 78 · Military: 44 (122 Pop) | Military Distribution: 38 Genoese · 4 Light Cav · 2 Monks`).
 
 ### 2.5 Timeline Table Columns (`14` Columns) & Army Counts in Notes
 Every phase table renders the following 14 columns:
 
 | Column Group | Column Header | Format & Meaning |
 | :--- | :--- | :--- |
-| **1. Pop** | `Pop / Vils` | Villager count (or compressed range) and total population including Scout + military: e.g., `7v (8 pop)` or `4–6v (5–7 pop)`. |
+| **1. Vils/Pop** | `Vils/Pop` | Villager count (or compressed range) followed by total population in parentheses without `v` or `pop` suffixes: e.g., `23 (24)` or `4–6 (5–7)`. |
 | **2. Timestamp** | `Time` | Exact simulation timestamp `MM:SS` (or compressed span `00:25 – 01:15`). |
 | **3. Action** | `Villager Assignment / Action` | Action taken at that step, including walk times, building/tech resource deductions (`-100W`, `-150F, -50G`), and build/research durations. |
-| **4–9. Food Villagers Breakdown** | `Sheep` \| `Boar` \| `Deer/Chk` \| `Berries` \| `Farms` \| `Total F` | Exact active villager count on each food source at the end of the step, plus bold `Total F` (`Sheep + Boar + Deer/Chk + Berries + Farms`). |
+| **4–9. Food Villagers Breakdown** | `Sheep` \| `Boar` \| `Deer/Chk` \| `Berries` \| `Farms` \| `Total` | Exact active villager count on each food source at the end of the step, plus bold `Total` (`Sheep + Boar + Deer/Chk + Berries + Farms`). |
 | **10–12. Other Vils** | `Wood` \| `Gold` \| `Stone` | Active villager counts on Wood (including TC stragglers), Gold, and Stone. |
-| **13. Resource Bank** | `Resource Bank` | Exact simulated stockpile (`Food F / Wood W / Gold G / Stone S`) **after** paying for any buildings, units, or techs triggered on that row. |
-| **14. Notes, Buildings & Army** | `Notes, Buildings & Army` | Renders a pill badge (`<span class="army-badge">Army: ...</span>`) showing the **count of army by unit type** (e.g., `Army: 1 Scout`, `Army: 38 Genoese · 4 Light Cav · 2 Monks`, `Army: 3 MAA · 8 Archers`) alongside tactical notes, animal transitions, and building queues. |
+| **13. Resource Bank** | `Resource Bank` | Exact simulated stockpile (`Food / Wood / Gold / Stone`) rendered with standard AoE2 resource icons (`food.png`, `wood.png`, `gold.png`, `stone.png`) **after** paying for any buildings, units, or techs triggered on that row. |
+| **14. Notes, Buildings & Army** | `Notes, Buildings & Army` | Renders a pill badge (`<span class="army-badge">Army: ...</span>`) showing the **count of army by unit type** (e.g., `Army: 38 Genoese · 4 Light Cav · 2 Monks`, `Army: 3 MAA · 8 Archers`) alongside tactical notes, animal transitions, and building queues. Omit the single starting Scout (`1 Scout`) until other military units are produced or upgraded. |
 
 ---
 

@@ -500,10 +500,9 @@ h1 {
 /* Resource Bank Over Time Chart */
 .chart-controls {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     margin-bottom: 10px;
 }
 
@@ -544,10 +543,57 @@ h1 {
 .swatch-gold { background: var(--gold); }
 .swatch-stone { background: var(--stone); }
 
-.chart-readout {
+.chart-readout,
+.chart-pop-readout {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
     font-size: 0.85rem;
     color: var(--muted);
-    min-height: 1.3em;
+    min-height: 1.65em;
+    padding: 2px 8px;
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+}
+
+.chart-readout strong,
+.chart-pop-readout strong {
+    color: var(--text);
+}
+
+/* Inline AoE2 Resource Icons */
+.res-icon {
+    width: 15px;
+    height: 15px;
+    vertical-align: -2.5px;
+    margin-left: 2px;
+    display: inline-block;
+    object-fit: contain;
+}
+
+th .res-icon,
+.chart-series-toggle .res-icon {
+    width: 16px;
+    height: 16px;
+    vertical-align: -3px;
+    margin-left: 3px;
+}
+
+.bank-cell {
+    white-space: nowrap;
+}
+
+.bank-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+}
+
+.bank-sep {
+    color: var(--zero);
+    margin: 0 3px;
 }
 
 .chart-svg-wrap {
@@ -588,6 +634,13 @@ h1 {
     stroke-width: 1.2;
     stroke-dasharray: 4 3;
     opacity: 0.75;
+}
+
+.chart-milestone-bg {
+    fill: var(--card);
+    fill-opacity: 0.88;
+    stroke: var(--border);
+    stroke-width: 0.75;
 }
 
 .chart-milestone-label {
