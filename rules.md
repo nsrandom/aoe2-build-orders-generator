@@ -55,7 +55,15 @@ This document is the authoritative specification for calculating, simulating, an
   - Automatically include **Double-Bit Axe** (`100F, 50W, 25s`) upon reaching Feudal Age and **Bow Saw** (`150F, 100W, 50s`) upon reaching Castle Age.
   - Automatically include **Horse Collar** (`75F, 75W, 20s`) before seeding heavy farms (unless executing a tight all-in build).
 
-### 1.4 Required Output Formats & Directory Layout (`output.md`)
+### 1.4 Market Usage & Expected Prices
+- **Occasional Market Usage:** Feel free to occasionally use the Market to balance resource stockpiles (e.g., hitting Age-up clicks, Castle/TC drops, or key upgrades without idling production).
+- **Assumed Market Sell Prices (Gold received per `100` Food or Wood sold):**
+  - **Feudal Age:** High prices (`~70 Gold` per `100` Food/Wood sold; `~70–91 Gold` per `100` Stone sold).
+  - **Early to Mid Castle Age:** `~50 Gold` per `100` Food/Wood sold.
+  - **Late Castle Age:** `~30 Gold` per `100` Food/Wood sold.
+  - **Imperial Age:** `~15 Gold` per `100` Food/Wood sold.
+
+### 1.5 Required Output Formats & Directory Layout (`output.md`)
 See `/Users/asif/Projects/aoe/build-orders/gemini/output.md` for the complete output formatting specification. In summary, for every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
 1. **Build-Specific Python Scripts (`sim_<build_slug>.py`, `generate_<build_slug>.py`):**
    - Placed directly inside `builds/<build_slug>/` next to the output files.

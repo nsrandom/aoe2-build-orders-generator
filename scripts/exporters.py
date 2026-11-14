@@ -62,6 +62,7 @@ RTS_ICONS: Dict[str, str] = {
     "ballistics": "@university/Ballistics_aoe2DE.png@",
     "chemistry": "@university/Chemistry_aoe2DE.png@",
     "light_cavalry": "@stable/Lightcavalry_aoe2DE.png@",
+    "battering_ram": "@siege_workshop/Battering_ram_aoe2DE.png@",
     "trebuchet": "@castle/Trebuchet_aoe2DE.png@",
     "bombard_cannon": "@siege_workshop/Bombard_cannon_aoe2DE.png@",
 }
@@ -165,6 +166,8 @@ _UNIT_DISPLAY_NAMES: Dict[str, Tuple[str, str]] = {
     "genoese": ("Genoese", "Genoese"),
     "light_cav": ("Light Cav", "Light Cav"),
     "monk": ("Monk", "Monks"),
+    "battering_ram": ("Ram", "Rams"),
+    "ram": ("Ram", "Rams"),
     "trebuchet": ("Treb", "Trebs"),
     "bombard_cannon": ("BBC", "BBCs"),
 }
@@ -414,7 +417,7 @@ def compress_build_rows(rows: List[DetailedBuildRow]) -> List[DetailedBuildRow]:
 
         # 3. Check consecutive military unit queue rows
         u_re = re.compile(
-            r"^Queue (Light Cavalry|Genoese Crossbowman|Monk|Archer|Militia) #(\d+)(?:[–-]#?(\d+))?(?: \(\d+ units\))? at ([^()]+) \((.+)\)\.$"
+            r"^Queue (Light Cavalry|Genoese Crossbowman|Monk|Battering Ram|Archer|Militia) #(\d+)(?:[–-]#?(\d+))?(?: \(\d+ units\))? at ([^()]+) \((.+)\)\.$"
         )
         um1 = u_re.match(prev.action.strip())
         um2 = u_re.match(curr.action.strip())

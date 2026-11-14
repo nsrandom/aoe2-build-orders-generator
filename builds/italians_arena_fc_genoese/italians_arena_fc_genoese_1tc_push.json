@@ -1,0 +1,249 @@
+{
+    "name": "Italians Arena Fast Castle (Strategy 1: 1 TC Heavy Army Push (Genoese + Light Cav + Monks + Rams -> Imp TCs))",
+    "civilization": "Italians",
+    "author": "AoE2 Build Order Generator",
+    "source": "rules.md",
+    "description": "Italians Arena Strategy 1 (3 Deer, No Chickens): 26+2 Fast Castle -> Defensive Castle (0s wait) -> Genoese Crossbowmen + Light Cavalry (never idling TC) + Monastery & 2 Monks (max 1 Relic assumed) -> Forward Siege Workshop & Battering Rams at 30+ army -> Stick to 1 TC until clicking Imperial Age, then add TCs & push!",
+    "build_order": [
+        {
+            "villager_count": 6,
+            "age": 1,
+            "resources": {
+                "wood": 0,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #1-#3 @resource/Aoe2de_hammer.png@ 2 Houses at 0:00 then @animal/Sheep_aoe2DE.png@ (5s walk). Vils #4-#6 to @animal/Sheep_aoe2DE.png@. Push 3 @animal/Deer_aoe2DE.png@ (no Chickens)."
+            ]
+        },
+        {
+            "villager_count": 7,
+            "age": 1,
+            "resources": {
+                "wood": 1,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #7 walks 15s + @resource/Aoe2de_hammer.png@ @lumber_camp/Lumber_camp_aoe2de.png@ #1 -> @resource/Aoe2de_wood.png@."
+            ]
+        },
+        {
+            "villager_count": 9,
+            "age": 1,
+            "resources": {
+                "wood": 3,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #8-#9 to @resource/Aoe2de_wood.png@ at @lumber_camp/Lumber_camp_aoe2de.png@ #1."
+            ]
+        },
+        {
+            "villager_count": 10,
+            "age": 1,
+            "resources": {
+                "wood": 3,
+                "food": 7,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #10 lures 1st @animal/Boar_aoe2DE.png@ (arrives 03:25)."
+            ]
+        },
+        {
+            "villager_count": 11,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 7,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #11 to @resource/Aoe2de_wood.png@ at @lumber_camp/Lumber_camp_aoe2de.png@ #1 (4 on Wood)."
+            ]
+        },
+        {
+            "villager_count": 12,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 8,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #12 @resource/Aoe2de_hammer.png@ House #3 -> Pushed @animal/Deer_aoe2DE.png@ under TC."
+            ]
+        },
+        {
+            "villager_count": 15,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 11,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #13-#15 to Pushed @animal/Deer_aoe2DE.png@ under TC (4 on Deer + 7 on Boar). Lure 2nd @animal/Boar_aoe2DE.png@ at 04:43."
+            ]
+        },
+        {
+            "villager_count": 16,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 12,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #16 @resource/Aoe2de_hammer.png@ @mill/Mill_aoe2de.png@ on @resource/BerryBushDE.png@ -> @resource/BerryBushDE.png@."
+            ]
+        },
+        {
+            "villager_count": 19,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 15,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #17-#19 to @resource/BerryBushDE.png@ (Vil #18 builds House #4 first; 4/4 on Berries)."
+            ]
+        },
+        {
+            "villager_count": 20,
+            "age": 1,
+            "resources": {
+                "wood": 5,
+                "food": 15,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #20 to @resource/Aoe2de_wood.png@ at @lumber_camp/Lumber_camp_aoe2de.png@ #1 (5 on Wood)."
+            ]
+        },
+        {
+            "villager_count": 21,
+            "age": 1,
+            "resources": {
+                "wood": 5,
+                "food": 15,
+                "gold": 0,
+                "stone": 1
+            },
+            "notes": [
+                "Vil #21 @resource/Aoe2de_hammer.png@ @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_stone.png@ -> @resource/Aoe2de_stone.png@."
+            ]
+        },
+        {
+            "villager_count": 24,
+            "age": 1,
+            "resources": {
+                "wood": 5,
+                "food": 15,
+                "gold": 0,
+                "stone": 4
+            },
+            "notes": [
+                "Vils #22-#24 to @resource/Aoe2de_stone.png@ (Vil #24 builds House #5 first; 4/4 on Stone)."
+            ]
+        },
+        {
+            "villager_count": 26,
+            "age": 1,
+            "resources": {
+                "wood": 7,
+                "food": 15,
+                "gold": 0,
+                "stone": 4
+            },
+            "notes": [
+                "Vils #25-#26 to @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F, 0s TC idle)."
+            ]
+        },
+        {
+            "villager_count": 28,
+            "age": 2,
+            "resources": {
+                "wood": 11,
+                "food": 11,
+                "gold": 2,
+                "stone": 4
+            },
+            "notes": [
+                "In @age/FeudalAgeIconDE_alpha.png@: queue +2 @resource/MaleVillDE.jpg@s to @resource/Aoe2de_gold.png@ MC; 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil @resource/Aoe2de_hammer.png@ @blacksmith/Blacksmith_aoe2de.png@.",
+                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+70G high Feudal price) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G)."
+            ]
+        },
+        {
+            "villager_count": 28,
+            "age": 3,
+            "resources": {
+                "wood": 10,
+                "food": 9,
+                "gold": 5,
+                "stone": 4
+            },
+            "notes": [
+                "Upon clicking @age/CastleAgeIconDE_alpha.png@: research @lumber_camp/DoubleBitAxe_aoe2DE.png@ & @mill/HorseCollar_aoe2DE.png@. Seed Farms #3-#5, Gold Mining, @lumber_camp/Lumber_camp_aoe2de.png@ #2, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 & Fletching.",
+                "On reaching @age/CastleAgeIconDE_alpha.png@ (650+ @resource/Aoe2de_stone.png@ ready!): immediately drop Defensive @castle/Castle_aoe2DE.png@ (0s wait <= 10s max), research @lumber_camp/BowSaw_aoe2DE.png@, and keep 1 @town_center/Towncenter_aoe2DE.png@ continuous."
+            ]
+        },
+        {
+            "villager_count": 38,
+            "age": 3,
+            "resources": {
+                "wood": 16,
+                "food": 14,
+                "gold": 6,
+                "stone": 2
+            },
+            "notes": [
+                "Start Genoese Xbows at @castle/Castle_aoe2DE.png@, then @stable/Lightcavalry_aoe2DE.png@ at @stable/Stable_aoe2DE.png@ (never idle TC; drop to 2 on @resource/Aoe2de_stone.png@).",
+                "@resource/Aoe2de_hammer.png@ @monastery/Monastery_aoe2DE.png@ (-175W) and train 2 Monks (assume max 1 Relic secured = +30G/min).",
+                "Get early Archer & Cav upgrades (Padded Archer, Bodkin, Scale Barding, Bloodlines, Forging); use @market/Market_aoe2DE.png@ (~50G/100 early-mid Castle) if Wood floats."
+            ]
+        },
+        {
+            "villager_count": 52,
+            "age": 3,
+            "resources": {
+                "wood": 20,
+                "food": 20,
+                "gold": 10,
+                "stone": 2
+            },
+            "notes": [
+                "At 30+ Army: send forward @resource/MaleVillDE.jpg@ to @resource/Aoe2de_hammer.png@ Forward @siege_workshop/Siege_workshop_aoe2DE.png@ & train 3-4 @siege_workshop/Battering_ram_aoe2DE.png@s to push!",
+                "Add @university/University_aoe2DE.png@ (@university/Ballistics_aoe2DE.png@), @town_center/WheelbarrowDE.png@, Stable #2, and stick strictly to 1 @town_center/Towncenter_aoe2DE.png@ until clicking @age/ImperialAgeIconDE_alpha.png@ (use @market/Market_aoe2DE.png@ at ~30G/100 if needed)."
+            ]
+        },
+        {
+            "villager_count": 90,
+            "age": 4,
+            "resources": {
+                "wood": 34,
+                "food": 32,
+                "gold": 22,
+                "stone": 2
+            },
+            "notes": [
+                "After clicking @age/ImperialAgeIconDE_alpha.png@: add @town_center/Towncenter_aoe2DE.png@ #2 & #3 as soon as affordable!",
+                "Research @university/Chemistry_aoe2DE.png@, Conscription, Bracer, Capped Ram, Hussar, Elite Genoese, Pavise & Silk Armor + @siege_workshop/Bombard_cannon_aoe2DE.png@s!"
+            ]
+        }
+    ]
+}

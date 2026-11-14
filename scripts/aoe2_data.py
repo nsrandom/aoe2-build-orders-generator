@@ -105,6 +105,11 @@ class RuleConfig:
     wood_refresh_lc_threshold: float = 0.65  # build new LC when efficiency drops to 60%-65%
     max_lumberjacks_per_lc: int = 8  # add 2nd LC when expanding to 9+ lumberjacks (subject to Wood Priority Rule)
     max_end_of_age_tc_idle_seconds: float = 5.0
+    # Assumed Market sell prices (Gold per 100 Food/Wood sold) per rules.md
+    market_sell_gold_feudal: int = 70
+    market_sell_gold_early_mid_castle: int = 50
+    market_sell_gold_late_castle: int = 30
+    market_sell_gold_imperial: int = 15
 
 
 # Standard Animal / Hunt Specs per rules.md & AoE2:DE
