@@ -29,9 +29,11 @@ This document is the authoritative specification for calculating, simulating, an
   - **Chicken Variant (`6–8` chickens at `75 Food` each, `0.125 F/s` decay):** Consider both **Milling** (often optimal for `8` chickens = `600 Food`) and **Long-Distancing** with `2` villagers (often optimal for `6` chickens = `450 Food`, saving `100W`).
 - **Wood Cutting Efficiency Decay & Camp Refresh:**
   - Lumberjack gathering efficiency starts at **100%** (`0.39 wood/s` base).
-  - Efficiency **drops by 1% every 15 seconds** (`4%` per minute) elapsed since the current Lumber Camp was completed.
+  - Efficiency **drops by 1% every 20 seconds** (`3%` per minute) elapsed since the current Lumber Camp was completed.
   - Efficiency **resets to 100%** whenever a **new Lumber Camp** is completed.
-  - **Refresh Target:** Aim to construct a new Lumber Camp when wood cutting efficiency drops to **60%** (`600 seconds` / `10 minutes` after the previous Lumber Camp finished).
+  - **Refresh Target:** Aim to construct a new Lumber Camp when wood cutting efficiency drops to **60%–65%** (`700–800 seconds` / `11m 40s–13m 20s` after the previous Lumber Camp finished, typically around `14:00–15:40` in-game).
+  - **Wood Priority Rule:** Never delay essential progression buildings (Military Buildings, Blacksmith, Market, Eco Upgrades, Houses, or required Farms) to refresh a Lumber Camp; when wood is constrained in early-to-mid Feudal Age, defer the Lumber Camp refresh until core buildings and farms are placed.
+  - **Villager Density per Camp:** Aim for `7–8` villagers max per Lumber Camp; when expanding to `9+` lumberjacks, add a 2nd Lumber Camp (subject to the Wood Priority Rule) to prevent bumping and reset efficiency.
 - **Animal Rot (Decay) & Villager Allocation Limits:**
   - Villagers must minimize rot by only slaughtering one animal of a given type at a time unless there are too many villagers to fit on a single carcass.
   - **Ideal villager counts per carcass/patch:**
@@ -80,7 +82,7 @@ For every requested build order, create a dedicated directory `builds/<build_slu
 | **Farmer** (Heavy Plow) | `0.3533` | `21.20` | `11` | |
 | **Farmer** (Wheelbarrow) | `0.3838` | `23.03` | `13` | Near cap before Hand Cart |
 | **Farmer** (Hand Cart) | `0.4000` | `24.00` | `15` | |
-| **Lumberjack** (Base) | `0.3900` | `23.40` | `10` | `-1%` every `15s` (`-4%/min`); refresh LC at `60%` |
+| **Lumberjack** (Base) | `0.3900` | `23.40` | `10` | `-1%` every `20s` (`-3%/min`); refresh LC at `60%–65%` |
 | **Lumberjack** (Double-Bit Axe) | `0.4680` (`~0.47`) | `28.08` | `10` | `+20%` (`100F, 50W, 25s`) |
 | **Lumberjack** (Bow Saw) | `0.5616` (`~0.56`) | `33.70` | `10` | `+20%` (`150F, 100W, 50s`) |
 | **Gold Miner** (Base) | `0.3800` | `22.80` | `10` | |
