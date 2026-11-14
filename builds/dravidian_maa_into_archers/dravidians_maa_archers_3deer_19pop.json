@@ -1,0 +1,142 @@
+{
+    "name": "Dravidians 19 Pop MAA into Archers (3 Deer Pushed (19 Pop / 18v))",
+    "civilization": "Dravidians",
+    "author": "AoE2 Build Order Generator",
+    "source": "rules.md",
+    "description": "Dravidians 18-Vil (19 Pop) Man-at-Arms into Archers (3 Deer Pushed (19 Pop / 18v)), extended through Castle Age. Leverages Dravidians +200W per age-up and -50% Barracks tech cost (MAA = 50F, 20G) to fund 3 MAA, Double-Bit Axe, Horse Collar, continuous Archer production, Wheelbarrow, and a ~20:00 Castle Age timing with 20 Archers.",
+    "build_order": [
+        {
+            "villager_count": 6,
+            "age": 1,
+            "resources": {
+                "wood": 0,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "@resource/Aoe2de_hammer.png@ 2 Houses at 0:00 (only 5s return walk to @animal/Sheep_aoe2DE.png@).",
+                "First 6 @resource/MaleVillDE.jpg@ on @animal/Sheep_aoe2DE.png@ (6 ideal per carcass)."
+            ]
+        },
+        {
+            "villager_count": 9,
+            "age": 1,
+            "resources": {
+                "wood": 3,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "7th @resource/MaleVillDE.jpg@ walks 15s + @resource/Aoe2de_hammer.png@ @lumber_camp/Lumber_camp_aoe2de.png@ (finishes 02:30).",
+                "8th & 9th @resource/MaleVillDE.jpg@ to @resource/Aoe2de_wood.png@ (3 on @resource/Aoe2de_wood.png@)."
+            ]
+        },
+        {
+            "villager_count": 11,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 7,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "10th @resource/MaleVillDE.jpg@ lures 1st @animal/Boar_aoe2DE.png@ (15s walk each way; arrives 03:25, shepherds finish 4th @animal/Sheep_aoe2DE.png@ at 03:34 then 7 @resource/MaleVillDE.jpg@ eat @animal/Boar_aoe2DE.png@).",
+                "11th @resource/MaleVillDE.jpg@ to @resource/Aoe2de_wood.png@ (4 on @resource/Aoe2de_wood.png@)."
+            ]
+        },
+        {
+            "villager_count": 15,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 11,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "12th @resource/MaleVillDE.jpg@ @resource/Aoe2de_hammer.png@ House #3, then: Push 3 @animal/Deer_aoe2DE.png@ under TC; put 4 @resource/MaleVillDE.jpg@ on @animal/Deer_aoe2DE.png@ while 7 @resource/MaleVillDE.jpg@ eat @animal/Boar_aoe2DE.png@.",
+                "At 04:43, 1 hunter lures 2nd @animal/Boar_aoe2DE.png@ (arrives 05:13 right as 1st @animal/Boar_aoe2DE.png@ finishes)."
+            ]
+        },
+        {
+            "villager_count": 18,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 13,
+                "gold": 1,
+                "stone": 0
+            },
+            "notes": [
+                "Vils 16-17 to @resource/BerryBushDE.png@ / @resource/Aoe2de_food.png@ (and @resource/Aoe2de_hammer.png@ @mill/Mill_aoe2de.png@ if not milled yet).",
+                "Vil 18 @resource/Aoe2de_hammer.png@ House #4 then Long-Distance Mines @resource/Aoe2de_gold.png@.",
+                "Research @town_center/LoomDE.png@ and click @age/FeudalAgeIconDE_alpha.png@ (<= 5s TC idle rule)."
+            ]
+        },
+        {
+            "villager_count": 18,
+            "age": 2,
+            "resources": {
+                "wood": 7,
+                "food": 9,
+                "gold": 2,
+                "stone": 0
+            },
+            "notes": [
+                "During @age/FeudalAgeIconDE_alpha.png@ transition: move 2 TC @resource/Aoe2de_food.png@ @resource/MaleVillDE.jpg@ to @resource/Aoe2de_wood.png@.",
+                "1 @resource/MaleVillDE.jpg@ @resource/Aoe2de_hammer.png@ @barracks/Barracks_aoe2DE.png@ then chains House #5 (0s walk between).",
+                "@resource/Aoe2de_hammer.png@ @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_gold.png@ (2 @resource/MaleVillDE.jpg@ on @resource/Aoe2de_gold.png@).",
+                "Train 3 Militia from @barracks/Barracks_aoe2DE.png@ (finish before Feudal arrives!)."
+            ]
+        },
+        {
+            "villager_count": 22,
+            "age": 2,
+            "resources": {
+                "wood": 8,
+                "food": 10,
+                "gold": 4,
+                "stone": 0
+            },
+            "notes": [
+                "In @age/FeudalAgeIconDE_alpha.png@ (+200 @resource/Aoe2de_wood.png@ Dravidians bonus!): immediately research Man-at-Arms (50F, 20G) & @lumber_camp/DoubleBitAxe_aoe2DE.png@.",
+                "@resource/Aoe2de_hammer.png@ 1st @archery_range/Archery_range_aoe2DE.png@ immediately, then research @mill/HorseCollar_aoe2DE.png@.",
+                "Send next 2 @resource/MaleVillDE.jpg@ to @resource/Aoe2de_gold.png@ (4 on @resource/Aoe2de_gold.png@) and produce continuous Archers + @resource/MaleVillDE.jpg@.",
+                "@resource/Aoe2de_hammer.png@ @blacksmith/Blacksmith_aoe2de.png@ -> research Fletching, and seed @mill/FarmDE.png@s as hunt/sheep decay."
+            ]
+        },
+        {
+            "villager_count": 35,
+            "age": 2,
+            "resources": {
+                "wood": 10,
+                "food": 18,
+                "gold": 7,
+                "stone": 0
+            },
+            "notes": [
+                "Refresh @lumber_camp/Lumber_camp_aoe2de.png@ #2 when wood efficiency hits 60% (-1%/15s = 10:00 after LC #1).",
+                "Seed up to 14-18 @mill/FarmDE.png@s, send 3 more @resource/MaleVillDE.jpg@ to @resource/Aoe2de_gold.png@ (7 on @resource/Aoe2de_gold.png@), and research Gold Mining.",
+                "Research @town_center/WheelbarrowDE.png@ at TC, then click @age/CastleAgeIconDE_alpha.png@ (800F, 200G) while producing continuous Archers."
+            ]
+        },
+        {
+            "villager_count": 35,
+            "age": 3,
+            "resources": {
+                "wood": 10,
+                "food": 18,
+                "gold": 7,
+                "stone": 0
+            },
+            "notes": [
+                "During @age/CastleAgeIconDE_alpha.png@ transition: @resource/Aoe2de_hammer.png@ 2nd @archery_range/Archery_range_aoe2DE.png@ (-175W) and research Padded Archer Armor (-100F).",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (+200 @resource/Aoe2de_wood.png@ Dravidians bonus!) with 19-21 Archers in field.",
+                "Immediately research Crossbowman, Bodkin Arrow, and @lumber_camp/BowSaw_aoe2DE.png@, and produce continuous Crossbowmen from 2 @archery_range/Archery_range_aoe2DE.png@s."
+            ]
+        }
+    ]
+}

@@ -1,0 +1,168 @@
+{
+  "civ": {
+    "Generic": {},
+        "Armenians (Stronger Eco Techs)":{
+            "double-bit axe": 0.04, 
+            "bow saw": 0.04, 
+            "two-man saw": 0.04,
+            "gold mining": 0.04, 
+            "gold shaft mining": 0.04,
+            "stone mining": 0.04, 
+            "stone shaft mining": 0.04
+        },
+    "Japanese - Dark Age": {
+      "fishing ship shore": 0.05,
+      "fishing ship deep": 0.05,
+      "fish trap": 0.05
+    },
+    "Japanese - Feudal Age": {
+      "fishing ship shore": 0.1,
+      "fishing ship deep": 0.1,
+      "fish trap": 0.1
+    },
+    "Japanese - Castle Age": {
+      "fishing ship shore": 0.15,
+      "fishing ship deep": 0.15,
+      "fishing ship shore gillnets": 0.15,
+      "fishing ship deep gillnets": 0.15,
+      "fish trap": 0.15,
+      "fish trap gillnets": 0.15
+    },
+    "Japanese - Imperial Age": {
+      "fishing ship shore": 0.2,
+      "fishing ship deep": 0.2,
+      "fishing ship shore gillnets": 0.2,
+      "fishing ship deep gillnets": 0.2,
+      "fish trap": 0.2,
+      "fish trap gillnets": 0.2
+    },
+    "Aztecs (Farms)": {
+      "farmer": "22.46",
+      "farm heavy plow": "22.98",
+      "wheelbarrow": "23.9",
+      "wheelbarrow heavy plow": "24.00",
+      "hand cart": "24.00"
+    },
+    "Slavs (Farms)": {
+      "farmer": "23.34",
+      "farm heavy plow": "24.38",
+      "wheelbarrow": "26.45",
+      "wheelbarrow heavy plow": "26.68",
+      "hand cart": "27.6"
+    },
+    "Berbers (Farms)": {
+      "farmer": "20.88",
+      "farm heavy plow": "21.61",
+      "wheelbarrow": "23.13",
+      "wheelbarrow heavy plow": "23.64",
+      "hand cart": "24.00"
+    },
+    "Mayans (Farms)": {
+      "farmer": "19.50",
+      "farm heavy plow": "20.04",
+      "wheelbarrow": "21.59",
+      "wheelbarrow heavy plow": "22.06",
+      "hand cart": "24.12"
+    },
+    "Khmer (Farms)": {
+      "farmer": "21.48",
+      "farm heavy plow": "22.11",
+      "wheelbarrow": "23.56",
+      "wheelbarrow heavy plow": "23.77",
+      "hand cart": "24.00"
+    },
+    "Mongols (Hunters)": {
+      "hunter": 0.4
+    },
+    "Britons (Shepherds)": {
+      "shepherd": 0.25
+    },
+    "Celts (Lumberjacks)": {
+      "lumberjack": 0.15,
+      "double-bit axe": 0.15,
+      "bow saw": 0.15,
+      "two-man saw": 0.15
+    },
+    "Franks (Foragers)": {
+      "forager": 0.15
+    },
+    "Koreans (Stone Miners)": {
+      "stone miner": 0.2,
+      "stone mining": 0.2,
+      "stone shaft mining": 0.2
+    },
+    "Turks (Gold Miners)": {
+      "gold miner": 0.25,
+      "gold mining": 0.25,
+      "gold shaft mining": 0.25
+    },
+    "Malians (Gold Miners)": {
+      "gold miner": 0.1,
+      "gold mining": 0.1,
+      "gold shaft mining": 0.1,
+      "oyster gatherer": 0.1
+    },
+    "Mapuche (Foragers)": {
+      "forager": 0.25
+    },
+    "Romans (5% Everything)": {
+        "farmer": 0.05, 
+        "farm heavy plow": 0.05, 
+        "wheelbarrow": 0.05, 
+        "wheelbarrow heavy plow": 0.05, 
+        "hand cart": 0.05, 
+        "hunter": 0.05, 
+        "shepherd": 0.05, 
+        "forager": 0.05, 
+        "fisherman": 0.05, 
+        "lumberjack": 0.05, 
+        "double-bit axe": 0.05, 
+        "bow saw": 0.05, 
+        "two-man saw": 0.05, 
+        "gold miner": 0.05, 
+        "gold mining": 0.05, 
+        "gold shaft mining": 0.05,
+        "oyster gatherer": 0.05, 
+        "stone miner": 0.05, 
+        "stone mining": 0.05, 
+        "stone shaft mining": 0.05
+    },
+    "Georgians (10% Everything Near Church)": {
+        "farmer": 0.1, 
+        "farm heavy plow": 0.1, 
+        "wheelbarrow": 0.1, 
+        "wheelbarrow heavy plow": 0.1, 
+        "hand cart": 0.1, 
+        "hunter": 0.1, 
+        "shepherd": 0.1, 
+        "forager": 0.1, 
+        "fisherman": 0.1, 
+        "lumberjack": 0.1, 
+        "double-bit axe": 0.1, 
+        "bow saw": 0.1, 
+        "two-man saw": 0.1, 
+        "gold miner": 0.1, 
+        "gold mining": 0.1, 
+        "gold shaft mining": 0.1, 
+        "oyster gatherer": 0.1, 
+        "stone miner": 0.1, 
+        "stone mining": 0.1, 
+        "stone shaft mining": 0.1
+    }
+  },
+  "team": {
+    "Aztec Relics": {
+      "relic": 0.3333
+    },
+    "Grand Trunk Road": {
+      "gold miner": 0.1,
+      "gold mining": 0.1,
+      "gold shaft mining": 0.1,
+      "relic": 0.1,
+      "trade cart": 0.1
+    },
+    "Spanish Trade": {
+      "trade cart": 0.25
+    }
+  }
+}
