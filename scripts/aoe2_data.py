@@ -100,9 +100,10 @@ class RuleConfig:
     camp_or_berry_walk_time_one_way: float = 15.0
     farm_walk_time: float = 5.0
     straggler_walk_time: float = 3.0
-    wood_decay_step_seconds: float = 15.0  # -1% every 15 seconds (-4% per minute)
+    wood_decay_step_seconds: float = 20.0  # -1% every 20 seconds (-3% per minute)
     wood_decay_per_step: float = 0.01
-    wood_refresh_lc_threshold: float = 0.60  # build new LC when efficiency drops to 60%
+    wood_refresh_lc_threshold: float = 0.65  # build new LC when efficiency drops to 60%-65%
+    max_lumberjacks_per_lc: int = 8  # add 2nd LC when expanding to 9+ lumberjacks (subject to Wood Priority Rule)
     max_end_of_age_tc_idle_seconds: float = 5.0
 
 
@@ -317,6 +318,16 @@ class AoE2Database:
         barracks_techs = {"man-at-arms", "long swordsman", "two-handed swordsman", "champion", "pikeman", "halberdier", "supplies", "gambesons", "squires", "arson"}
         if key in barracks_techs and "barracks_tech_cost_multiplier" in civ_bonus:
             cost = cost.scale(civ_bonus["barracks_tech_cost_multiplier"])
+
+        university_and_dock_techs = {
+            "ballistics", "chemistry", "masonry", "architecture", "murder holes",
+            "treadmill crane", "fortified wall", "guard tower", "keep", "bombard tower",
+            "siege engineers", "heated shot", "arrowslits", "careening", "dry dock",
+            "shipwright", "gillnets", "war galley", "galleon", "fast fire ship",
+            "heavy demolition ship", "cannon galleon", "elite cannon galleon",
+        }
+        if key in university_and_dock_techs and "dock_and_university_tech_cost_multiplier" in civ_bonus:
+            cost = cost.scale(civ_bonus["dock_and_university_tech_cost_multiplier"])
 
         return cost, res_time
 

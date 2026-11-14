@@ -1,0 +1,722 @@
+/* Shared Reusable Stylesheet for AoE2:DE Build Order HTML Guides */
+
+:root {
+    /* Light theme raw color tokens (Default) */
+    --bg-light: #f8fafc;
+    --card-light: #ffffff;
+    --surface-subtle-light: #f1f5f9;
+    --surface-hover-light: #e2e8f0;
+    --border-light: #cbd5e1;
+    --border-strong-light: #94a3b8;
+    --text-light: #0f172a;
+    --muted-light: #475569;
+    --zero-light: #94a3b8;
+    --accent-light: #b45309;
+    --accent-bg-light: #fef3c7;
+    --accent-text-light: #78350f;
+    --food-light: #dc2626;
+    --food-sub-light: #b91c1c;
+    --food-bg-light: rgba(220, 38, 38, 0.08);
+    --food-hdr-bg-light: #fee2e2;
+    --food-subhdr-bg-light: #fef2f2;
+    --wood-light: #15803d;
+    --gold-light: #b45309;
+    --stone-light: #475569;
+    --army-text-light: #4338ca;
+    --army-bg-light: #e0e7ff;
+    --army-border-light: #a5b4fc;
+    --th-bg-light: #f1f5f9;
+    --row-even-light: rgba(15, 23, 42, 0.025);
+    --shadow-light: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+    /* Dark theme raw color tokens */
+    --bg-dark: #0f141c;
+    --card-dark: #18202c;
+    --surface-subtle-dark: #1e293b;
+    --surface-hover-dark: #283548;
+    --border-dark: #2a3546;
+    --border-strong-dark: #475872;
+    --text-dark: #e6edf3;
+    --muted-dark: #9aa7b8;
+    --zero-dark: #475569;
+    --accent-dark: #eab308;
+    --accent-bg-dark: rgba(234, 179, 8, 0.16);
+    --accent-text-dark: #fde047;
+    --food-dark: #f87171;
+    --food-sub-dark: #fca5a5;
+    --food-bg-dark: rgba(248, 113, 113, 0.09);
+    --food-hdr-bg-dark: #2d222a;
+    --food-subhdr-bg-dark: #252029;
+    --wood-dark: #a3e635;
+    --gold-dark: #facc15;
+    --stone-dark: #94a3b8;
+    --army-text-dark: #c7d2fe;
+    --army-bg-dark: rgba(99, 102, 241, 0.2);
+    --army-border-dark: #6366f1;
+    --th-bg-dark: #202b3b;
+    --row-even-dark: rgba(255, 255, 255, 0.02);
+    --shadow-dark: 0 2px 6px rgba(0, 0, 0, 0.3);
+
+    /* Default fallback assignment (Light mode default) */
+    --bg: var(--bg-light);
+    --card: var(--card-light);
+    --surface-subtle: var(--surface-subtle-light);
+    --surface-hover: var(--surface-hover-light);
+    --border: var(--border-light);
+    --border-strong: var(--border-strong-light);
+    --text: var(--text-light);
+    --muted: var(--muted-light);
+    --zero: var(--zero-light);
+    --accent: var(--accent-light);
+    --accent-bg: var(--accent-bg-light);
+    --accent-text: var(--accent-text-light);
+    --food: var(--food-light);
+    --food-sub: var(--food-sub-light);
+    --food-bg: var(--food-bg-light);
+    --food-hdr-bg: var(--food-hdr-bg-light);
+    --food-subhdr-bg: var(--food-subhdr-bg-light);
+    --wood: var(--wood-light);
+    --gold: var(--gold-light);
+    --stone: var(--stone-light);
+    --army-text: var(--army-text-light);
+    --army-bg: var(--army-bg-light);
+    --army-border: var(--army-border-light);
+    --th-bg: var(--th-bg-light);
+    --row-even: var(--row-even-light);
+    --shadow: var(--shadow-light);
+
+    /* Mandatory: support both light and dark schemes on :root and sync with <meta name="color-scheme"> */
+    color-scheme: light dark;
+
+    &:has(> head > meta[name="color-scheme"][content="light"]) {
+        color-scheme: light;
+    }
+
+    &:has(> head > meta[name="color-scheme"][content="dark"]) {
+        color-scheme: dark;
+        --bg: var(--bg-dark);
+        --card: var(--card-dark);
+        --surface-subtle: var(--surface-subtle-dark);
+        --surface-hover: var(--surface-hover-dark);
+        --border: var(--border-dark);
+        --border-strong: var(--border-strong-dark);
+        --text: var(--text-dark);
+        --muted: var(--muted-dark);
+        --zero: var(--zero-dark);
+        --accent: var(--accent-dark);
+        --accent-bg: var(--accent-bg-dark);
+        --accent-text: var(--accent-text-dark);
+        --food: var(--food-dark);
+        --food-sub: var(--food-sub-dark);
+        --food-bg: var(--food-bg-dark);
+        --food-hdr-bg: var(--food-hdr-bg-dark);
+        --food-subhdr-bg: var(--food-subhdr-bg-dark);
+        --wood: var(--wood-dark);
+        --gold: var(--gold-dark);
+        --stone: var(--stone-dark);
+        --army-text: var(--army-text-dark);
+        --army-bg: var(--army-bg-dark);
+        --army-border: var(--army-border-dark);
+        --th-bg: var(--th-bg-dark);
+        --row-even: var(--row-even-dark);
+        --shadow: var(--shadow-dark);
+    }
+
+    @media (prefers-color-scheme: dark) {
+        &:not(:has(> head > meta[name="color-scheme"][content="light"])) {
+            --bg: var(--bg-dark);
+            --card: var(--card-dark);
+            --surface-subtle: var(--surface-subtle-dark);
+            --surface-hover: var(--surface-hover-dark);
+            --border: var(--border-dark);
+            --border-strong: var(--border-strong-dark);
+            --text: var(--text-dark);
+            --muted: var(--muted-dark);
+            --zero: var(--zero-dark);
+            --accent: var(--accent-dark);
+            --accent-bg: var(--accent-bg-dark);
+            --accent-text: var(--accent-text-dark);
+            --food: var(--food-dark);
+            --food-sub: var(--food-sub-dark);
+            --food-bg: var(--food-bg-dark);
+            --food-hdr-bg: var(--food-hdr-bg-dark);
+            --food-subhdr-bg: var(--food-subhdr-bg-dark);
+            --wood: var(--wood-dark);
+            --gold: var(--gold-dark);
+            --stone: var(--stone-dark);
+            --army-text: var(--army-text-dark);
+            --army-bg: var(--army-bg-dark);
+            --army-border: var(--army-border-dark);
+            --th-bg: var(--th-bg-dark);
+            --row-even: var(--row-even-dark);
+            --shadow: var(--shadow-dark);
+        }
+    }
+
+    @supports (color: light-dark(white, black)) {
+        --bg: light-dark(var(--bg-light), var(--bg-dark));
+        --card: light-dark(var(--card-light), var(--card-dark));
+        --surface-subtle: light-dark(var(--surface-subtle-light), var(--surface-subtle-dark));
+        --surface-hover: light-dark(var(--surface-hover-light), var(--surface-hover-dark));
+        --border: light-dark(var(--border-light), var(--border-dark));
+        --border-strong: light-dark(var(--border-strong-light), var(--border-strong-dark));
+        --text: light-dark(var(--text-light), var(--text-dark));
+        --muted: light-dark(var(--muted-light), var(--muted-dark));
+        --zero: light-dark(var(--zero-light), var(--zero-dark));
+        --accent: light-dark(var(--accent-light), var(--accent-dark));
+        --accent-bg: light-dark(var(--accent-bg-light), var(--accent-bg-dark));
+        --accent-text: light-dark(var(--accent-text-light), var(--accent-text-dark));
+        --food: light-dark(var(--food-light), var(--food-dark));
+        --food-sub: light-dark(var(--food-sub-light), var(--food-sub-dark));
+        --food-bg: light-dark(var(--food-bg-light), var(--food-bg-dark));
+        --food-hdr-bg: light-dark(var(--food-hdr-bg-light), var(--food-hdr-bg-dark));
+        --food-subhdr-bg: light-dark(var(--food-subhdr-bg-light), var(--food-subhdr-bg-dark));
+        --wood: light-dark(var(--wood-light), var(--wood-dark));
+        --gold: light-dark(var(--gold-light), var(--gold-dark));
+        --stone: light-dark(var(--stone-light), var(--stone-dark));
+        --army-text: light-dark(var(--army-text-light), var(--army-text-dark));
+        --army-bg: light-dark(var(--army-bg-light), var(--army-bg-dark));
+        --army-border: light-dark(var(--army-border-light), var(--army-border-dark));
+        --th-bg: light-dark(var(--th-bg-light), var(--th-bg-dark));
+        --row-even: light-dark(var(--row-even-light), var(--row-even-dark));
+        --shadow: light-dark(var(--shadow-light), var(--shadow-dark));
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px 32px;
+    line-height: 1.45;
+}
+
+/* Header & Top-Right Theme Toggle */
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.55rem;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.theme-toggle:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+}
+
+.theme-toggle svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.theme-toggle-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Show "Dark mode" (moon) option when currently in light mode; show "Light mode" (sun) option when in dark mode */
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .theme-option-dark {
+    display: none;
+}
+
+:root:has(> head > meta[name="color-scheme"][content="light"]) .theme-option-light {
+    display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not(:has(> head > meta[name="color-scheme"][content="light"])) .theme-option-dark {
+        display: none;
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    :root:not(:has(> head > meta[name="color-scheme"][content="dark"])) .theme-option-light {
+        display: none;
+    }
+}
+
+/* Top-Level Variant Tab Bar */
+.tab-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    background: var(--surface-subtle);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.tab-btn:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+}
+
+.tab-btn.active {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+}
+
+:root:has(> head > meta[name="color-scheme"][content="dark"]) .tab-btn.active {
+    color: #0f141c;
+}
+
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Variant Container & Header */
+.variant-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 28px;
+    box-shadow: var(--shadow);
+}
+
+.variant-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.variant-header h2 {
+    margin: 0;
+    font-size: 1.28rem;
+}
+
+.variant-tag {
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.desc {
+    color: var(--muted);
+    margin: 6px 0 14px 0;
+}
+
+/* Expand / Collapse All Button */
+.toggle-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-subtle);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.toggle-all-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border-strong);
+}
+
+.toggle-all-btn[aria-expanded="true"] .expand-label,
+.toggle-all-btn[aria-expanded="false"] .collapse-label {
+    display: none;
+}
+
+/* Collapsible Sections (<details class="phase-block">) */
+.phase-block {
+    margin-top: 16px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+}
+
+.phase-title {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    background: var(--surface-subtle);
+    border-radius: 7px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.phase-title::-webkit-details-marker {
+    display: none;
+}
+
+.phase-block[open] > .phase-title {
+    border-bottom: 1px solid var(--border);
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.phase-title:hover {
+    background: var(--surface-hover);
+}
+
+/* Custom disclosure chevron right before the label text */
+.phase-title::before {
+    content: "";
+    inline-size: 0.9em;
+    block-size: 0.9em;
+    flex-shrink: 0;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat center / contain;
+    rotate: -90deg;
+}
+
+.phase-block[open] > .phase-title::before {
+    rotate: 0deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .phase-title::before {
+        transition: rotate 0.2s ease;
+    }
+}
+
+.phase-block::details-content {
+    interpolate-size: allow-keywords;
+    overflow: clip;
+    contain: layout;
+}
+
+.phase-block:not([open])::details-content {
+    block-size: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .phase-block::details-content {
+        transition: block-size, content-visibility, display;
+        transition-duration: 0.22s;
+        transition-timing-function: ease-in-out;
+        transition-behavior: allow-discrete;
+    }
+}
+
+.phase-body {
+    padding: 12px 14px;
+}
+
+.badge {
+    background: var(--accent-bg);
+    color: var(--accent-text);
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+.phase-range {
+    color: var(--muted);
+    font-size: 0.86rem;
+    font-weight: 400;
+}
+
+.phase-row-count {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 0.82rem;
+    font-weight: 500;
+}
+
+/* Summary Card */
+.summary-card {
+    background: var(--surface-subtle);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 4px;
+}
+
+.summary-card p {
+    margin: 0;
+}
+
+.summary-card p + p {
+    margin-top: 6px;
+}
+
+/* Resource Bank Over Time Chart */
+.chart-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.chart-series-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface-subtle);
+    font-size: 0.84rem;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.chart-series-toggle input {
+    margin: 0;
+    cursor: pointer;
+}
+
+.swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.swatch-food { background: var(--food); }
+.swatch-wood { background: var(--wood); }
+.swatch-gold { background: var(--gold); }
+.swatch-stone { background: var(--stone); }
+
+.chart-readout {
+    font-size: 0.85rem;
+    color: var(--muted);
+    min-height: 1.3em;
+}
+
+.chart-svg-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.resource-chart-svg {
+    width: 100%;
+    height: auto;
+    min-width: 680px;
+    max-height: 320px;
+    display: block;
+    background: var(--surface-subtle);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.chart-grid-line {
+    stroke: var(--border);
+    stroke-width: 1;
+    stroke-dasharray: 3 3;
+}
+
+.chart-axis-line {
+    stroke: var(--border-strong);
+    stroke-width: 1.2;
+}
+
+.chart-axis-label {
+    fill: var(--muted);
+    font-size: 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.chart-milestone-line {
+    stroke: var(--accent);
+    stroke-width: 1.2;
+    stroke-dasharray: 4 3;
+    opacity: 0.75;
+}
+
+.chart-milestone-label {
+    fill: var(--accent);
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.chart-line {
+    fill: none;
+    stroke-width: 2.3;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.chart-line-food { stroke: var(--food); }
+.chart-line-wood { stroke: var(--wood); }
+.chart-line-gold { stroke: var(--gold); }
+.chart-line-stone { stroke: var(--stone); }
+
+.chart-series-hidden {
+    display: none;
+}
+
+.chart-hover-line {
+    stroke: var(--text);
+    stroke-width: 1;
+    stroke-dasharray: 2 2;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.chart-hover-dot {
+    opacity: 0;
+    pointer-events: none;
+    stroke: var(--card);
+    stroke-width: 1.5;
+}
+
+/* Timeline Tables */
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+th, td {
+    border: 1px solid var(--border);
+    padding: 7px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+th {
+    background: var(--th-bg);
+    font-weight: 600;
+}
+
+tr:nth-child(even) {
+    background: var(--row-even);
+}
+
+.mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.center {
+    text-align: center;
+}
+
+.res-f {
+    color: var(--food);
+    font-weight: 700;
+    background: var(--food-bg);
+}
+
+.res-f-sub {
+    color: var(--food-sub);
+}
+
+.zero {
+    color: var(--zero);
+}
+
+.food-group-hdr {
+    background: var(--food-hdr-bg);
+    color: var(--food-sub);
+    text-align: center;
+}
+
+.sub-hdr {
+    background: var(--food-subhdr-bg);
+    font-size: 0.8rem;
+    color: var(--food);
+}
+
+.res-w {
+    color: var(--wood);
+    font-weight: 600;
+}
+
+.res-g {
+    color: var(--gold);
+    font-weight: 600;
+}
+
+.res-s {
+    color: var(--stone);
+    font-weight: 600;
+}
+
+.notes {
+    color: var(--muted);
+}
+
+.army-badge {
+    display: inline-block;
+    background: var(--army-bg);
+    color: var(--army-text);
+    border: 1px solid var(--army-border);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    margin-right: 6px;
+    margin-bottom: 2px;
+    white-space: nowrap;
+}

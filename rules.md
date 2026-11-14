@@ -55,17 +55,19 @@ This document is the authoritative specification for calculating, simulating, an
   - Automatically include **Double-Bit Axe** (`100F, 50W, 25s`) upon reaching Feudal Age and **Bow Saw** (`150F, 100W, 50s`) upon reaching Castle Age.
   - Automatically include **Horse Collar** (`75F, 75W, 20s`) before seeding heavy farms (unless executing a tight all-in build).
 
-### 1.4 Required Output Formats & Directory Layout
-For every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
+### 1.4 Required Output Formats & Directory Layout (`output.md`)
+See `/Users/asif/Projects/aoe/build-orders/gemini/output.md` for the complete output formatting specification. In summary, for every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
 1. **Build-Specific Python Scripts (`sim_<build_slug>.py`, `generate_<build_slug>.py`):**
    - Placed directly inside `builds/<build_slug>/` next to the output files.
 2. **Detailed HTML Build Order Report (`<build_slug>.html`):**
-   - **Top-Level Tab Views:** Present the map variants (e.g., `3 Deer Pushed`, `8 Chickens Milled`, `6 Chickens Long-Distance`) as top-level tabs.
-   - **Sectioned Villager-by-Villager Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, etc.) with columns `Pop | Timestamp | Villager Assignment / Action | Food Villagers Breakdown (Sheep / Boar / Deer/Chk / Berries / Farms / Total F) | Other Vils (W/G/S) | Resource Bank (F/W/G/S) | Notes / Buildings`.
+   - **Top-Level Tab Views:** Present all requested or map-dependent variants (e.g., `24+2` vs. `26+2 + Monastery` vs. `26+2 No Monastery`, or `3 Deer Pushed` vs. `8 Chickens Milled` vs. `6 Chickens Long-Distance`) as top-level tabs.
+   - **Sectioned Villager-by-Villager Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`) with columns `Pop | Timestamp | Villager Assignment / Action | Food Villagers Breakdown (Sheep / Boar / Deer/Chk / Berries / Farms / Total F) | Other Vils (W/G/S) | Resource Bank (F/W/G/S) | Notes / Buildings`.
+   - **Continuous Villager & Action Row Compression:** When consecutive villagers or repeated actions perform the same assignment within the same phase (e.g., `Vils #4–#6 -> Sheep under TC`), compress them into **1 row** via `compress_build_rows()`.
    - **Age-Up Transition Reallocations & Queues**
    - **Steady-State Target Summary & Rot/Efficiency Telemetry**
 3. **RTS Overlay Compatible JSON (`.json`):**
    - Follows the `RTS_Overlay` / `AoE Overlay` schema (`name`, `civilization`, `author`, `source`, `description`, `build_order` array of `{villager_count, age, resources: {wood, food, gold, stone}, notes}` using `@category/icon@` asset tags).
+   - Consecutive villagers performing the same task are compressed into a single step in `build_order`.
    - Every step must satisfy `sum(resources.values()) == villager_count`.
 
 ---

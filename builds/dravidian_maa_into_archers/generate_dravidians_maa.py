@@ -48,6 +48,30 @@ def run_dravidians_maa_variant(
     planner = BackwardPlanner(sim.db, sim.rules)
 
     rows: List[DetailedBuildRow] = []
+    resource_timeline: List[Dict[str, object]] = []
+
+    def current_army_dict() -> Dict[str, int]:
+        inf_key = "maa" if "man-at-arms" in sim.upgrades else "militia"
+        arch_key = "crossbow" if "crossbowman" in sim.upgrades else "archer"
+        return {
+            "scout": sim.military_units.get("scout", 1),
+            inf_key: sim.military_units.get("militia", 0),
+            arch_key: sim.military_units.get("archer", 0),
+        }
+
+    def record_timeline_point() -> None:
+        from exporters import format_army_counts
+        resource_timeline.append(
+            {
+                "t": sim.time_s,
+                "ts": sim.fmt_time(),
+                "food": round(sim.bank.food),
+                "wood": round(sim.bank.wood),
+                "gold": round(sim.bank.gold),
+                "stone": round(sim.bank.stone),
+                "army": format_army_counts(current_army_dict()),
+            }
+        )
 
     def add_row(pop_str: str, phase: str, action: str, notes: str = "") -> None:
         alloc = sim.current_macro_alloc()
@@ -73,8 +97,10 @@ def run_dravidians_maa_variant(
                 chicken_vils=fb["chicken"],
                 berry_vils=fb["berries"],
                 farm_vils=fb["farm"],
+                army_counts=current_army_dict(),
             )
         )
+        record_timeline_point()
 
     # t = 0:00 initial state (3 vils build 2 houses, TC queues Vil 4)
     sim.bank = sim.bank - ResourceBundle(food=50)
@@ -141,12 +167,6 @@ def run_dravidians_maa_variant(
                 if v["role"] == "boar":
                     v["busy_until"] = t + 30
                     break
-            add_row(
-                f"{len(sim.vils)}v",
-                "Dark Age",
-                "1 Boar hunter walks out (15s each way) to lure Boar #2; arrives at 05:13 right as Boar #1 finishes.",
-                "Maintains 7 hunters on Boar with zero double-boar rot.",
-            )
 
         # Check TC completions
         if t == sim.tc_busy_until and sim.tc_action != "idle":
@@ -211,10 +231,12 @@ def run_dravidians_maa_variant(
                         sim.vils.append({"id": vid, "role": "deer", "busy_until": t})
                         action_text = f"Vil #{vid} -> Pushed Deer under TC (0s walk)"
                         if vid == 15:
-                            note_text = "7 on Boar + 4 on Pushed Deer (both at exact ideal 7 & 4 counts)."
+                            note_text = "4/4 on Pushed Deer + 7 on Boar. At 04:43, 1 Boar hunter walks out (15s each way) to lure Boar #2 (arrives 05:13 as Boar #1 finishes)."
                     elif variant_key == "chicken_mill_8":
                         sim.vils.append({"id": vid, "role": "chicken_mill", "busy_until": t + 15})
                         action_text = f"Vil #{vid} -> Chickens at Mill (15s walk; 4 vils on 8-Chicken patch)"
+                        if vid == 15:
+                            note_text = "At 04:43, 1 Boar hunter walks out (15s each way) to lure Boar #2 (arrives 05:13)."
                     else:
                         if vid == 14:
                             sim.bank = sim.bank - ResourceBundle(wood=100)
@@ -223,6 +245,7 @@ def run_dravidians_maa_variant(
                         else:
                             sim.vils.append({"id": vid, "role": "berries", "busy_until": t + 15})
                             action_text = "Vil #15 -> Berries at Mill (15s walk)"
+                            note_text = "At 04:43, 1 Boar hunter walks out (15s each way) to lure Boar #2 (arrives 05:13)."
                 elif vid == 16:
                     if variant_key == "deer":
                         sim.bank = sim.bank - ResourceBundle(wood=100)
@@ -650,6 +673,8 @@ def run_dravidians_maa_variant(
                 )
 
         sim.tick_gather()
+        if t % 10 == 0:
+            record_timeline_point()
 
     # Steady-state calculation for 1 TC Villager + 1 Archery Range (or 2 Archery Ranges)
     steady_state = planner.compute_steady_state_vils(
@@ -812,6 +837,7 @@ def run_dravidians_maa_variant(
             "rotted_food": {k: round(v, 1) for k, v in sim.rotted_food.items()},
             "total_rotted_food": round(sum(sim.rotted_food.values()), 1),
         },
+        resource_timeline=resource_timeline,
     )
 
 
