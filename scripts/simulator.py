@@ -7,9 +7,10 @@ Simulates an AoE2:DE build order tick-by-tick (dt = 1.0s) enforcing all rules in
 - Generic building walk time: 10s each way (or 0s between sequential buildings)
 - Boar lure walk time: 15s each way (30s total for the luring villager)
 - Camp / Berry walk time: 15s one way
-- Wood efficiency decay: -5% per minute since last Lumber Camp completed, resets to 100% on new LC
+- Wood efficiency decay: -1% every 20s (-3% per minute) since last Lumber Camp completed, resets to 100% on new LC
 - Animal rot: tracks individual carcasses (sheep/boar/deer/chicken) with per-second decay
-  and checks ideal (6/7/4/2) and max (+2) villager counts
+  and checks ideal (6/7-8/4/2) and max (7/9-10/7/4) villager counts
+- Boar shooting garrison idling: 6-8 vils garrison in TC for 5s when each boar arrives
 - Town Center queue & <= 5s pre-click idle rule
 """
 

@@ -1,35 +1,42 @@
 #!/usr/bin/env python3
 """
-Detailed 1-Second Discrete-Event Simulator & Optimizer for:
-Dravidians Man-at-Arms (MAA) into Archers (Deer & Chicken Variants).
+Detailed 1-Second Discrete-Event Simulator for:
+Dravidians 20-Pop (19-Vil) 3 MAA -> Archers (7 Chickens Milled on Arabia)
+into 3 Castle Age Paths:
+  1. 1tc_xbow_lc_ram      : 2-Range Xbows + 1-Stable Light Cav + 2-4 Armored Elephants (Rams) -> Later TCs
+  2. 1tc_xbow_ls_spear_ram: 2-Range Xbows + 2-Barracks Longswords & Spears/Pikes (~50/50) + 2-4 Armored Elephants -> Later TCs
+  3. 3tc_boom_ele_archer  : 3 TC Boom First -> Switch to 2-Range Elephant Archers + 8-10 Light Cav + 2-4 Armored Elephants
 
-Enforces all rules from `rules.md`:
+Enforces all updated rules in `rules.md`:
 - Initial houses (0:00): 2 vils on House 1 (18.75s) + 5s return walk; 1 vil on House 2 (25s) + 5s return walk
 - Subsequent houses: 5s walk each way (or 0s if chained sequentially)
 - Generic non-house buildings: 10s walk each way (or 0s if chained sequentially)
 - Resource camps (LC, Mill, MC): 15s walk one-way + 35s build + 0s walk to gather
-- Boar lure: 15s walk each way (30s total luring time for 1 villager)
-- Wood efficiency decay: -1% every 15s since last LC finished (resets to 100% on new LC)
-- Animal rot:
-  - Sheep (100F, 0.25/s decay, 0.33/s gather): ideal 6, max 8
-  - Boar (340F, 0.40/s decay, 0.41/s gather): ideal 7, max 9
-  - Deer (140F, 0.25/s decay, 0.41/s gather): ideal 4, max 6
-  - Chicken (75F, 0.125/s decay, 0.41/s gather): ideal 2, max 4
+- Boar lure: 15s walk each way (30s total luring interruption) PLUS 7 TC vils garrisoned for 5s
+  to shoot each boar down (35 vil-seconds idle per boar). After shooting boar down, 6+ vils go
+  immediately onto the boar if only a small amount of food remains on the active sheep.
+- Animal villager limits:
+  - Sheep: ideal 6, max 7 (never > 7)
+  - Boar: ideal 7-8, max 9 normally (up to 10 allowed during transitions)
+  - Chicken (7 milled): 4 vils on milled patch (0.41 F/s, 0.125 F/s decay)
+- Wood efficiency decay: -1% every 20s (-3%/min) since last LC completed (resets to 100% on new LC)
+- Later-stage imperfect execution buffer: 92% macro eco efficiency in Feudal Age, 90% in Castle Age+
 - Dravidians bonuses:
-  - +200 Wood upon reaching Feudal Age
-  - Barracks technologies cost -50% (Man-at-Arms = 50F, 20G, 40s)
+  - +200 Wood upon reaching Feudal Age & +200 Wood upon reaching Castle Age
+  - Barracks techs cost -50% (MAA = 50F/20G, Long Swordsman = 75F/32.5G, Pikeman = 80F/45G, Squires = 50F, Arson = 37.5F/12.5G)
+  - Armored Elephant (120F, 95G, 36s) replaces Battering Ram
 """
 
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 
-from aoe2_data import ANIMALS, AoE2Database, ResourceBundle, RuleConfig, calc_construction_time
+from aoe2_data import ANIMALS, AoE2Database, ResourceBundle, RuleConfig
 
 
 @dataclass
@@ -44,12 +51,12 @@ class SimActionLog:
     notes: str = ""
 
 
-class DetailedEcoSimulator:
-    def __init__(self, variant: str = "deer", chicken_count: int = 8) -> None:
+class DravidiansChickenSimulator:
+    def __init__(self, path_key: str, chicken_count: int = 7) -> None:
         self.db = AoE2Database()
         self.rules = RuleConfig()
         self.civ = "Dravidians"
-        self.variant = variant  # "deer", "chicken_mill_8", "chicken_ld_6"
+        self.path_key = path_key
 
         self.time_s: int = 0
         self.age: int = 1
@@ -57,12 +64,12 @@ class DetailedEcoSimulator:
         self.total_gathered = ResourceBundle()
         self.rotted_food: Dict[str, float] = {"sheep": 0.0, "boar": 0.0, "deer": 0.0, "chicken": 0.0}
 
-        # Remaining unslaughtered animals
+        # Arabia resources: 8 sheep, 2 boars, 7 chickens milled, 0 pushed deer
         self.remaining_animals: Dict[str, int] = {
             "sheep": 8,
             "boar": 2,
-            "deer": 3 if variant == "deer" else 0,
-            "chicken": chicken_count if variant.startswith("chicken") else 0,
+            "deer": 0,
+            "chicken": chicken_count,
         }
         self.active_carcass_food: Dict[str, float] = {
             "sheep": 0.0,
@@ -71,14 +78,15 @@ class DetailedEcoSimulator:
             "chicken": 0.0,
         }
         self.berries_food: float = 6 * 125.0
-        self.straggler_wood: float = 5 * 100.0
+        self.straggler_wood: float = 6 * 100.0
 
         self.lc_completed_s: Optional[int] = None
+        self.lc_count: int = 0
         self.upgrades: set[str] = set()
         self.buildings: List[str] = ["town center"]
 
         # Track each villager individually
-        # role in: sheep, boar, deer, chicken_mill, chicken_ld, berries, farm, straggler, wood, gold, gold_ld
+        # role in: sheep, boar, chicken_mill, farm, straggler, wood, gold, gold_ld
         self.vils: List[Dict[str, object]] = [
             {"id": 1, "role": "sheep", "busy_until": 24, "busy_desc": "Build House 1 (2v) + walk"},
             {"id": 2, "role": "sheep", "busy_until": 24, "busy_desc": "Build House 1 (2v) + walk"},
@@ -88,20 +96,43 @@ class DetailedEcoSimulator:
         self.bank = self.bank - ResourceBundle(wood=50)
         self.buildings.extend(["house", "house"])
 
-        # TC queue state
-        self.tc_busy_until: int = 0
-        self.tc_action: str = "idle"
-        self.tc_target_vil_role: str = "sheep"
-        self.tc_target_vil_walk: int = 0
-        self.tc_target_vil_note: str = ""
+        # Multi-TC queue state (up to 3 TCs)
+        self.tc_count: int = 1
+        self.tc_busy_until: List[int] = [0, 0, 0]
+        self.tc_action: List[str] = ["idle", "idle", "idle"]
         self.tc_idle_s: int = 0
+        self.tc1_idle_castle_s: int = 0
+
+        # Farm food capacity & automatic reseeding
+        self.farm_food_pool: List[float] = []
+        self.farms_seeded: int = 0
+        self.farms_reseeded: int = 0
+
+        # Market telemetry
+        self.market_trades: List[Dict[str, object]] = []
 
         self.logs: List[SimActionLog] = []
-        self.military_units: Dict[str, int] = {"scout": 1, "militia": 0, "archer": 0}
+        self.military_units: Dict[str, int] = {
+            "scout": 1,
+            "militia": 0,
+            "spearman": 0,
+            "archer": 0,
+            "elephant_archer": 0,
+            "light_cav": 0,
+            "armored_elephant": 0,
+        }
 
     def fmt_time(self, t: Optional[int] = None) -> str:
         sec = self.time_s if t is None else t
         return f"{sec // 60:02d}:{sec % 60:02d}"
+
+    def macro_efficiency(self) -> float:
+        """Applies imperfect human execution buffer in Feudal Age (92%) and Castle Age+ (90%)."""
+        if self.age == 1:
+            return 1.0
+        if self.age == 2:
+            return self.rules.feudal_macro_efficiency
+        return self.rules.castle_macro_efficiency
 
     def wood_efficiency(self) -> float:
         if self.lc_completed_s is None:
@@ -110,11 +141,22 @@ class DetailedEcoSimulator:
         steps = int(elapsed // int(self.rules.wood_decay_step_seconds))
         return max(0.20, 1.0 - self.rules.wood_decay_per_step * steps)
 
+    def farm_capacity(self) -> float:
+        if "heavy plow" in self.upgrades:
+            return 375.0
+        if "horse collar" in self.upgrades:
+            return 250.0
+        return 175.0
+
+    def register_new_farm(self) -> None:
+        self.farm_food_pool.append(self.farm_capacity())
+        self.farms_seeded += 1
+
     def current_macro_alloc(self) -> Dict[str, int]:
         out = {"food": 0, "wood": 0, "gold": 0, "stone": 0}
         for v in self.vils:
             r = str(v["role"])
-            if r in ("sheep", "boar", "deer", "chicken_mill", "chicken_ld", "berries", "farm"):
+            if r in ("sheep", "boar", "deer", "chicken_mill", "berries", "farm"):
                 out["food"] += 1
             elif r in ("straggler", "wood"):
                 out["wood"] += 1
@@ -130,48 +172,14 @@ class DetailedEcoSimulator:
             r = str(v["role"])
             if r in ("sheep", "boar", "deer", "berries", "farm"):
                 fb[r] += 1
-            elif r in ("chicken_mill", "chicken_ld"):
+            elif r == "chicken_mill":
                 fb["chicken"] += 1
         return fb
 
-    def detailed_alloc_str(self) -> str:
-        counts: Dict[str, int] = {}
-        for v in self.vils:
-            r = str(v["role"])
-            counts[r] = counts.get(r, 0) + 1
-        return ", ".join(f"{k}:{v}" for k, v in counts.items() if v > 0)
+    def count_role(self, *roles: str) -> int:
+        return sum(1 for v in self.vils if v["role"] in roles)
 
-    def record_snapshot(self, description: str, notes: str = "") -> None:
-        pop_tot = len(self.vils) + sum(self.military_units.values())
-        self.logs.append(
-            SimActionLog(
-                time_s=self.time_s,
-                pop_total=pop_tot,
-                vil_count=len(self.vils),
-                age=self.age,
-                description=description,
-                alloc=self.current_macro_alloc(),
-                bank=self.bank,
-                notes=notes,
-            )
-        )
-
-    def queue_villager(self, role: str, walk_s: int = 0, build_action: Optional[Tuple[str, int]] = None, note: str = "") -> bool:
-        """Queues a villager at TC if idle and >= 50F."""
-        if self.time_s < self.tc_busy_until:
-            return False
-        if not self.bank.can_afford(ResourceBundle(food=50)):
-            return False
-        self.bank = self.bank - ResourceBundle(food=50)
-        self.tc_busy_until = self.time_s + 25
-        self.tc_action = "villager"
-        self.tc_target_vil_role = role
-        self.tc_target_vil_walk = walk_s
-        self.tc_target_vil_note = note
-        self._pending_vil_build = build_action
-        return True
-
-    def _harvest_carcass(self, anim_key: str, n_vils: int, gather_rate_override: Optional[float] = None) -> float:
+    def _harvest_carcass(self, anim_key: str, n_vils: int, gather_rate_override: Optional[float] = None, boar_active: bool = False) -> float:
         spec = ANIMALS[anim_key]
         if n_vils <= 0:
             if self.active_carcass_food[anim_key] > 0:
@@ -187,7 +195,7 @@ class DetailedEcoSimulator:
             self.active_carcass_food[anim_key] = spec.initial_food
 
         r_vil = gather_rate_override if gather_rate_override is not None else spec.base_gather_rate
-        gather = n_vils * r_vil
+        gather = n_vils * r_vil * self.macro_efficiency()
         rot = spec.decay_rate
         tot = gather + rot
         avail = self.active_carcass_food[anim_key]
@@ -201,13 +209,18 @@ class DetailedEcoSimulator:
             r1 = rot * frac
             self.active_carcass_food[anim_key] = 0.0
             self.rotted_food[anim_key] += r1
-            # If a sheep finishes while a boar carcass is already open under TC, switch shepherds to boar instead of killing a new sheep!
-            if anim_key == "sheep" and self.active_carcass_food.get("boar", 0.0) > 0:
+            # Never slaughter a new sheep while a boar carcass is already open under TC
+            if anim_key == "sheep" and boar_active:
+                boar_cnt = self.count_role("boar")
                 for v in self.vils:
                     if v["role"] == "sheep":
-                        v["role"] = "boar"
+                        if boar_cnt < 10:
+                            v["role"] = "boar"
+                            boar_cnt += 1
+                        else:
+                            v["role"] = "straggler"
+                            v["busy_until"] = self.time_s + 3
                 return g1
-            # Roll over remaining fraction of second if more animals exist
             if self.remaining_animals[anim_key] > 0:
                 self.remaining_animals[anim_key] -= 1
                 self.active_carcass_food[anim_key] = spec.initial_food
@@ -219,7 +232,7 @@ class DetailedEcoSimulator:
                 return g1 + g2
             return g1
 
-    def tick_gather(self) -> None:
+    def tick_gather(self, boar_open: bool = False, reseed_reserve_w: float = 0.0) -> None:
         """Collects resources for 1 second across all non-busy villagers."""
         active: Dict[str, int] = {}
         for v in self.vils:
@@ -227,88 +240,102 @@ class DetailedEcoSimulator:
                 role = str(v["role"])
                 active[role] = active.get(role, 0) + 1
 
-        # Automatic fallback under TC: if boar/deer/chicken runs out, switch those vils to sheep (or berries/straggler if sheep also exhausted)
-        for fallback_src in ("boar", "deer", "chicken_mill", "chicken_ld"):
-            anim_name = "chicken" if fallback_src.startswith("chicken") else fallback_src
+        # Fallback under TC when boar or chicken runs out:
+        # Respect max 7 villagers on sheep! Overflow moves to TC straggler trees (3s walk).
+        for fallback_src in ("boar", "chicken_mill"):
+            anim_name = "chicken" if fallback_src == "chicken_mill" else fallback_src
             if active.get(fallback_src, 0) > 0 and self.active_carcass_food[anim_name] <= 1e-6 and self.remaining_animals[anim_name] <= 0:
+                sheep_cnt = self.count_role("sheep")
+                sheep_avail = self.active_carcass_food["sheep"] > 1e-6 or self.remaining_animals["sheep"] > 0
                 for v in self.vils:
                     if v["role"] == fallback_src and self.time_s >= int(v["busy_until"]):
-                        v["role"] = "sheep"
-                active["sheep"] = active.get("sheep", 0) + active.pop(fallback_src, 0)
+                        if sheep_avail and sheep_cnt < 7:
+                            v["role"] = "sheep"
+                            sheep_cnt += 1
+                            active["sheep"] = active.get("sheep", 0) + 1
+                        else:
+                            v["role"] = "straggler"
+                            v["busy_until"] = self.time_s + 3
+                active.pop(fallback_src, None)
 
-        # If all sheep are exhausted, any remaining shepherds move to berries (up to 4) or TC stragglers (3s walk) to fund farms
+        # If all sheep are exhausted, shepherds transition to TC straggler trees (3s walk), or Lumber Camp if stragglers depleted
         if active.get("sheep", 0) > 0 and self.active_carcass_food["sheep"] <= 1e-6 and self.remaining_animals["sheep"] <= 0:
-            berry_cnt = sum(1 for v in self.vils if v["role"] == "berries")
             for v in self.vils:
                 if v["role"] == "sheep" and self.time_s >= int(v["busy_until"]):
-                    if berry_cnt < 4 and self.berries_food > 0 and self.variant != "chicken_mill_8":
-                        v["role"] = "berries"
-                        v["busy_until"] = self.time_s + 15
-                        berry_cnt += 1
-                    else:
+                    if self.straggler_wood > 1e-6:
                         v["role"] = "straggler"
                         v["busy_until"] = self.time_s + 3
+                    else:
+                        v["role"] = "wood"
+                        v["busy_until"] = self.time_s + 15
             active.pop("sheep", None)
 
+        # If TC stragglers run out, fallback stragglers walk to Lumber Camp woodline (15s walk)
+        if active.get("straggler", 0) > 0 and self.straggler_wood <= 1e-6:
+            for v in self.vils:
+                if v["role"] == "straggler" and self.time_s >= int(v["busy_until"]):
+                    v["role"] = "wood"
+                    v["busy_until"] = self.time_s + 15
+            active.pop("straggler", None)
+
+        eff = self.macro_efficiency()
+        boar_present = boar_open or self.active_carcass_food["boar"] > 1e-6
+
         f_gain = 0.0
-        f_gain += self._harvest_carcass("sheep", active.get("sheep", 0), 0.33)
+        f_gain += self._harvest_carcass("sheep", active.get("sheep", 0), 0.33, boar_active=boar_present)
         f_gain += self._harvest_carcass("boar", active.get("boar", 0), 0.41)
-        f_gain += self._harvest_carcass("deer", active.get("deer", 0), 0.41)
+        f_gain += self._harvest_carcass("chicken", active.get("chicken_mill", 0), 0.41)
 
-        # Milled chickens: 0.41 hunter gather rate at mill
-        if active.get("chicken_mill", 0) > 0:
-            f_gain += self._harvest_carcass("chicken", active.get("chicken_mill", 0), 0.41)
-        elif active.get("chicken_ld", 0) > 0:
-            # Long-distance chickens: 35F carry capacity at 0.41 F/s (85.4s gather) + 30s round trip walk
-            # Effective rate while at chicken = 0.41 * (85.37 / 115.37) = 0.3034 F/s
-            ld_eff_rate = 0.41 * (35.0 / 0.41) / ((35.0 / 0.41) + 30.0)
-            f_gain += self._harvest_carcass("chicken", active.get("chicken_ld", 0), ld_eff_rate)
-        else:
-            self._harvest_carcass("chicken", 0)
-
-        # Berries
-        if active.get("berries", 0) > 0:
-            if self.berries_food > 1e-6:
-                bg = min(self.berries_food, active["berries"] * 0.31)
-                self.berries_food -= bg
-                f_gain += bg
+        # Farms + automatic reseeding
+        n_farms = active.get("farm", 0)
+        if n_farms > 0:
+            if "hand cart" in self.upgrades:
+                base_farm_r = 0.4000
+            elif "wheelbarrow" in self.upgrades and "heavy plow" in self.upgrades:
+                base_farm_r = 0.3860
+            elif "wheelbarrow" in self.upgrades:
+                base_farm_r = 0.3838
+            elif "heavy plow" in self.upgrades:
+                base_farm_r = 0.3533
             else:
-                for v in self.vils:
-                    if v["role"] == "berries" and self.time_s >= int(v["busy_until"]):
-                        v["role"] = "straggler"
-                        v["busy_until"] = self.time_s + 15
+                base_farm_r = 0.3383
+            farm_r = base_farm_r * eff
+            f_gain += n_farms * farm_r
+            for idx in range(min(n_farms, len(self.farm_food_pool))):
+                self.farm_food_pool[idx] -= farm_r
+                if self.farm_food_pool[idx] <= 0:
+                    if self.bank.wood >= (60.0 + reseed_reserve_w):
+                        self.bank = self.bank - ResourceBundle(wood=60)
+                        self.farm_food_pool[idx] = self.farm_capacity()
+                        self.farms_reseeded += 1
+                    else:
+                        self.farm_food_pool[idx] = 0.0
 
-        # Farms
-        if active.get("farm", 0) > 0:
-            farm_rate = 0.3838 if "wheelbarrow" in self.upgrades else 0.3383
-            f_gain += active["farm"] * farm_rate
-
-        # Wood
+        # Wood (stragglers + lumberjacks with -1%/20s decay)
         w_gain = 0.0
         if active.get("straggler", 0) > 0 and self.straggler_wood > 0:
-            sg = min(self.straggler_wood, active["straggler"] * 0.39)
+            sg = min(self.straggler_wood, active["straggler"] * 0.39 * eff)
             self.straggler_wood -= sg
             w_gain += sg
 
         if active.get("wood", 0) > 0:
-            base_w = 0.39 * (1.20 if "double-bit axe" in self.upgrades else 1.0) * (1.20 if "bow saw" in self.upgrades else 1.0)
-            w_gain += active["wood"] * base_w * self.wood_efficiency()
+            base_w = (
+                0.39
+                * (1.20 if "double-bit axe" in self.upgrades else 1.0)
+                * (1.20 if "bow saw" in self.upgrades else 1.0)
+                * (1.10 if "two-man saw" in self.upgrades else 1.0)
+            )
+            w_gain += active["wood"] * base_w * self.wood_efficiency() * eff
 
         # Gold
         g_gain = 0.0
         if active.get("gold", 0) > 0:
             base_g = 0.38 * (1.15 if "gold mining" in self.upgrades else 1.0)
-            g_gain += active["gold"] * base_g
+            g_gain += active["gold"] * base_g * eff
         if active.get("gold_ld", 0) > 0:
-            # Long distance gold: 10G / (10/0.38 + 30) = 0.1776 G/s
             ld_g = 10.0 / ((10.0 / 0.38) + 30.0)
-            g_gain += active["gold_ld"] * ld_g
+            g_gain += active["gold_ld"] * ld_g * eff
 
         delta = ResourceBundle(food=f_gain, wood=w_gain, gold=g_gain)
         self.bank = self.bank + delta
         self.total_gathered = self.total_gathered + delta
-
-
-if __name__ == "__main__":
-    s = DetailedEcoSimulator("deer")
-    print("DetailedEcoSimulator initialized cleanly.")

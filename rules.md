@@ -14,7 +14,10 @@ This document is the authoritative specification for calculating, simulating, an
 - **Resource Camp Construction & Travel Time:**
   - Sending a villager to a Lumber Camp, Gold Mine, Stone Mine, or Berry Bushes takes **15 seconds one-way**.
   - When a villager walks `15s` to a resource to construct a drop-off camp (Lumber Camp, Mining Camp, Mill; `35s` build time) and remains there to gather, they pay **only the 15s one-way resource walk** plus the `35s` build time (`0s` walk after completion to start gathering).
-- **Boar Luring:** **15 seconds walking time each way** (`30s` total luring interruption for the luring villager).
+- **Boar Luring & TC Garrison Shooting Idling:**
+  - Luring villager pays **15 seconds walking time each way** (`30s` total luring interruption).
+  - **TC Garrison Idling:** When each boar arrives under the TC, **6–8 villagers** under the TC garrison for **5 seconds** to shoot the boar down (`30–40` villager-seconds of lost gathering per boar).
+  - **Post-Kill Transition:** After shooting the boar down, put **6+ villagers** onto the boar right away if only a small amount of food remains on the active sheep (finish any tiny leftover sheep right after or let 1 vil finish it, avoiding double rot).
 - **Farms & TC Straggler Trees:**
   - **Farms:** **5 seconds** walking time to place a Farm (`60W`, `15s` build time), and **0 seconds** after completion to begin farming.
   - **TC Straggler Trees:** **3 seconds** walking time when switching a villager between under-TC food (sheep/boar/deer) and a TC straggler tree (`100W` per tree).
@@ -37,12 +40,11 @@ This document is the authoritative specification for calculating, simulating, an
 - **Animal Rot (Decay) & Villager Allocation Limits:**
   - Villagers must minimize rot by only slaughtering one animal of a given type at a time unless there are too many villagers to fit on a single carcass.
   - **Ideal villager counts per carcass/patch:**
-    - **Sheep (Herdables):** `6` villagers (up to `8` max for short periods)
-    - **Boar (Large Hunt):** `7` villagers (up to `9` max for short periods)
-    - **Deer (Small Hunt):** `4` villagers (up to `6` max for short periods)
-    - **Chicken:** `2` villagers (up to `4` max for short periods)
-  - Up to **+2 extra villagers** beyond the ideal number are permitted for short periods to avoid slaughtering a second animal early and incurring double rot.
-  - Never slaughter a new sheep while a boar carcass is already open under the TC (shepherds finishing their current sheep must immediately switch onto the active boar).
+    - **Sheep (Herdables):** `6` villagers (max `7` — never put more than `7` on sheep)
+    - **Boar (Large Hunt):** `7–8` villagers (generally `9` or less; up to `10` allowed during age-up transition phases)
+    - **Deer (Small Hunt):** `4` villagers (max `7` — never put more than `7` on deer)
+    - **Chicken:** `2` villagers (`3–4` on a milled patch of `7` chickens)
+  - Never slaughter a new sheep while a boar carcass is already open under the TC (shepherds finishing their current sheep must immediately switch onto the active boar, and if only a small amount of food remains on the sheep when the boar is shot down, put `6+` vils on the boar).
   - A small amount of additional rot is acceptable if it leads to macro efficiencies elsewhere.
 - **Carried Resources on Re-tasking:**
   - Villagers do not lose carried resources when re-tasked at the TC or upon completing a drop-off camp.
@@ -63,19 +65,32 @@ This document is the authoritative specification for calculating, simulating, an
   - **Late Castle Age:** `~30 Gold` per `100` Food/Wood sold.
   - **Imperial Age:** `~15 Gold` per `100` Food/Wood sold.
 
-### 1.5 Required Output Formats & Directory Layout (`output.md`)
+### 1.5 Build Order Simplicity & Execution Buffer Policy
+- **Tight Early Precision (`~20–30` Vils) vs. High-Level Later Macro:**
+  - Humans can only follow a tight villager-by-villager build order for the first `~20–30` villagers (Dark Age + Feudal Transition for non-Fast-Castle builds; Dark Age + Feudal Age + Castle Click for Fast Castle builds).
+  - **Combined Same-Resource Steps:** Whenever multiple consecutive villagers go to the same resource—including when the 1st villager builds a camp (`Lumber Camp`, `Mill`, `Mining Camp`) or `House` before gathering that resource—combine them into a single step (e.g., `3 vils to Wood after 1st vil builds Lumber Camp`).
+  - **High-Level Macro Phases (Feudal+ for non-FC; Castle+ for FC):** Combine repetitive villager spawns, farm placements, houses, and continuous unit queues into high-level priority-loop instructions (e.g., `"Make vils continuously -> new vils go to stragglers & seed Farms every 60W, while producing X with leftover resources until <criteria>"`).
+- **Imperfect Execution Buffer (Later Stages):**
+  - Simulations apply a realistic human execution buffer in later ages (`~92%` effective macro gather efficiency in Feudal Age and `~90%` in Castle Age+, plus safety reserves before major clicks/buildings) to absorb villager transition friction, bumping, farm placement delays, and army micro overhead.
+- **Resource Float Cap & Late-Game Scaling Rule:**
+  - Unless intentionally banking resources for a concrete target (e.g., Age-Up click, Castle drop, or an expensive power-spike tech), avoid floating more than **`~500–1,000`** of any resource as the economy grows.
+  - Dynamically spend surplus resources according to the build's current phase goals: add extra military production buildings (`Archery Ranges`, `Barracks`, `Stables`, `Siege Workshops`), queue eco/military upgrades, expand Town Centers, or rebalance surplus villagers (and Market trades per Section 1.4 if heavily skewed).
+  - When a Castle Age build prioritizes ramping military quickly before Imperial Age (e.g., hitting an army threshold such as `50+` military units), scale extra military buildings aggressively early, then shift priority to **Imperial Age (`1000F, 800G`, `190s`)** — pausing/idling extra military buildings temporarily if needed so Imperial Age is reliably reached **before `40:00`**.
+- **Ballistics Priority Rule (`20+` Ranged Units):**
+  - Across all builds, once you have **`20+` ranged units** (Archers/Crossbowmen, Skirmishers, Cav Archers, Elephant Archers, Genoese, etc.), prioritize building a **University (`200W`)** and researching **Ballistics (`300W, 175G`)** ahead of extra production buildings, late TCs, or secondary upgrades — unless there is another explicit high-priority goal active (e.g., immediate Castle Age multi-TC boom drops or an imminent Age-Up click).
+
+### 1.6 Required Output Formats & Directory Layout (`output.md`)
 See `/Users/asif/Projects/aoe/build-orders/gemini/output.md` for the complete output formatting specification. In summary, for every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
 1. **Build-Specific Python Scripts (`sim_<build_slug>.py`, `generate_<build_slug>.py`):**
    - Placed directly inside `builds/<build_slug>/` next to the output files.
 2. **Detailed HTML Build Order Report (`<build_slug>.html`):**
-   - **Top-Level Tab Views:** Present all requested or map-dependent variants (e.g., `24+2` vs. `26+2 + Monastery` vs. `26+2 No Monastery`, or `3 Deer Pushed` vs. `8 Chickens Milled` vs. `6 Chickens Long-Distance`) as top-level tabs.
-   - **Sectioned Villager-by-Villager Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`) with columns `Pop | Timestamp | Villager Assignment / Action | Food Villagers Breakdown (Sheep / Boar / Deer/Chk / Berries / Farms / Total F) | Other Vils (W/G/S) | Resource Bank (F/W/G/S) | Notes / Buildings`.
-   - **Continuous Villager & Action Row Compression:** When consecutive villagers or repeated actions perform the same assignment within the same phase (e.g., `Vils #4–#6 -> Sheep under TC`), compress them into **1 row** via `compress_build_rows()`.
-   - **Age-Up Transition Reallocations & Queues**
+   - **Top-Level Tab Views:** Present all requested or map-dependent variants as top-level tabs.
+   - **Sectioned Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`).
+   - **Same-Resource & High-Level Macro Compression:** Consecutive villagers going to the same resource (including building the camp/house first) are combined into 1 row, and Feudal+ (non-FC) / Castle+ (FC) phases use high-level macro priority blocks.
    - **Steady-State Target Summary & Rot/Efficiency Telemetry**
 3. **RTS Overlay Compatible JSON (`.json`):**
    - Follows the `RTS_Overlay` / `AoE Overlay` schema (`name`, `civilization`, `author`, `source`, `description`, `build_order` array of `{villager_count, age, resources: {wood, food, gold, stone}, notes}` using `@category/icon@` asset tags).
-   - Consecutive villagers performing the same task are compressed into a single step in `build_order`.
+   - Same-resource villager steps (including camp/house builders) are combined into a single step, and later stages use concise macro priority steps.
    - Every step must satisfy `sum(resources.values()) == villager_count`.
 
 ---
@@ -105,9 +120,9 @@ With $N$ villagers gathering at rate $r$ and carcass decay rate $d$, harvest dur
 
 | Source | Count on Arabia | Initial Food ($F_0$) | Decay Rate ($d$) | Gather Rate ($r$) | Ideal Vils ($N$) | Net Yield at Ideal $N$ | Duration at Ideal $N$ |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Sheep** | `8` | `100 F` | `0.25 F/s` | `0.33 F/s` | `6` (max `8`) | `88.8 F` (`11.2 F` rot) | `44.8 s` |
-| **Boar** | `2` | `340 F` | `0.40 F/s` | `0.41 F/s` | `7` (max `9`) | `298.4 F` (`41.6 F` rot) | `104.0 s` |
-| **Deer** | `3` | `140 F` | `0.25 F/s` | `0.41 F/s` | `4` (max `6`) | `121.5 F` (`18.5 F` rot) | `74.1 s` |
+| **Sheep** | `8` | `100 F` | `0.25 F/s` | `0.33 F/s` | `6` (max `7`) | `88.8 F` (`11.2 F` rot) | `44.8 s` |
+| **Boar** | `2` | `340 F` | `0.40 F/s` | `0.41 F/s` | `7–8` (max `9`; `10` trans.) | `303.2 F` (`36.8 F` rot @8) | `92.4 s` |
+| **Deer** | `3` | `140 F` | `0.25 F/s` | `0.41 F/s` | `4` (max `7`) | `121.5 F` (`18.5 F` rot) | `74.1 s` |
 | **Chicken** | `6–8` | `75 F` | `0.125 F/s` | `0.33 F/s` | `2` (max `4`) | `63.1 F` (`11.9 F` rot) | `95.5 s` |
 | **Berry Bush** | `6` | `125 F` (`750 F` tot) | `0.00 F/s` | `0.31 F/s` | `4` | `125.0 F` (`0 F` rot) | `~100.8 s/bush` |
 | **Farm (Base)** | — | `175 F` | `0.00 F/s` | `0.3383 F/s` | `1` | `175.0 F` | `517.3 s` |

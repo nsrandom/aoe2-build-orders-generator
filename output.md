@@ -54,39 +54,38 @@ Because build order guides can be long, **every section inside each variant tab 
     2. **Row 2 (`#res-chart-X-readout` / `.chart-readout`):** Always placed on its own dedicated line below `.chart-legend` so it never shifts up and down as text length changes; displays `Time: MM:SS` and exact `Food · Wood · Gold · Stone` stockpiles with standard AoE2 resource icons.
     3. **Row 3 (`#res-chart-X-pop-readout` / `.chart-pop-readout`):** Placed on its own dedicated line directly below `#res-chart-X-readout`; displays **Total Vils & Military Counts**, followed by **Military Distribution** by unit type (e.g., `Total Vils: 78 · Military: 44 (122 Pop) | Military Distribution: 38 Genoese · 4 Light Cav · 2 Monks`).
 
-### 2.5 Timeline Table Columns (`14` Columns) & Army Counts in Notes
-Every phase table renders the following 14 columns:
+### 2.5 Timeline Table Columns (Dynamic Non-Zero Resource Columns) & Army Counts in Notes
+Every phase table dynamically omits any food sub-source (`Sheep`, `Boar`, `Deer`/`Chickens`, `Berries`, `Farms`) or macro resource column (`Food`, `Wood`, `Gold`, `Stone`) that has `0` villagers allocated across all rows of that phase table, keeping up to 14 columns:
 
 | Column Group | Column Header | Format & Meaning |
 | :--- | :--- | :--- |
 | **1. Vils/Pop** | `Vils/Pop` | Villager count (or compressed range) followed by total population in parentheses without `v` or `pop` suffixes: e.g., `23 (24)` or `4–6 (5–7)`. |
 | **2. Timestamp** | `Time` | Exact simulation timestamp `MM:SS` (or compressed span `00:25 – 01:15`). |
 | **3. Action** | `Villager Assignment / Action` | Action taken at that step, including walk times, building/tech resource deductions (`-100W`, `-150F, -50G`), and build/research durations. |
-| **4–9. Food Villagers Breakdown** | `Sheep` \| `Boar` \| `Deer/Chk` \| `Berries` \| `Farms` \| `Total` | Exact active villager count on each food source at the end of the step, plus bold `Total` (`Sheep + Boar + Deer/Chk + Berries + Farms`). |
-| **10–12. Other Vils** | `Wood` \| `Gold` \| `Stone` | Active villager counts on Wood (including TC stragglers), Gold, and Stone. |
+| **4–9. Food Villagers Breakdown** | Active sub-sources (`Sheep`, `Boar`, `Deer`/`Chickens`/`Deer/Chk`, `Berries`, `Farms`) \| `Total` | Exact active villager count on each non-zero food source at the end of the step, plus bold `Total`. Food sub-columns with `0` vils throughout that phase are omitted. |
+| **10–12. Other Vils** | `Wood` \| `Gold` \| `Stone` *(shown when `> 0`)* | Active villager counts on Wood (including TC stragglers), Gold, and Stone. Resource columns with `0` vils throughout that phase are omitted. |
 | **13. Resource Bank** | `Resource Bank` | Exact simulated stockpile (`Food / Wood / Gold / Stone`) rendered with standard AoE2 resource icons (`food.png`, `wood.png`, `gold.png`, `stone.png`) **after** paying for any buildings, units, or techs triggered on that row. |
 | **14. Notes, Buildings & Army** | `Notes, Buildings & Army` | Renders a pill badge (`<span class="army-badge">Army: ...</span>`) showing the **count of army by unit type** (e.g., `Army: 38 Genoese · 4 Light Cav · 2 Monks`, `Army: 3 MAA · 8 Archers`) alongside tactical notes, animal transitions, and building queues. Omit the single starting Scout (`1 Scout`) until other military units are produced or upgraded. |
 
 ---
 
-## 3. Continuous Villager & Action Row Compression
+## 3. Simplicity, Row Compression & High-Level Macro Phases
 
-To keep build order tables scannable in-game, **consecutive villagers or repeated actions that perform the same task within the same phase MUST be compressed into a single row**.
+To keep build order tables human-memorable and scannable in-game, **only the first ~20–30 villagers use tight step-by-step precision**, consecutive same-resource villagers are always merged (even when the 1st villager builds a camp or house first), and **later stages use high-level macro priority blocks**:
 
 ### 3.1 HTML Table Row Compression (`compress_build_rows` in `scripts/exporters.py`)
-1. **Continuous Villager Assignments:**
-   - When consecutive villagers `Vil #A` through `Vil #B` are assigned to the same task in the same phase without intervening building/tech rows, merge them into **1 row**:
-     - **`Pop / Vils`:** `A–Bv (P1–P2 pop)` — e.g., `4–6v (5–7 pop)`, `8–9v (9–10 pop)`, `13–15v (14–16 pop)`, `21–23v (22–24 pop)`.
-     - **`Time`:** `MM:SS – MM:SS` spanning from the first villager's spawn/assignment to the last villager's spawn/assignment — e.g., `00:25 – 01:15`.
-     - **`Villager Assignment / Action`:** `Vils #A–#B (N vils) -> <shared assignment>`.
+1. **Same-Resource Villager Combination (Including Camp/House Builders):**
+   - Whenever multiple consecutive villagers go to the **same resource**—including when the 1st villager builds a resource camp (`Lumber Camp`, `Mill`, `Mining Camp`) or `House` before gathering that resource—combine them into **1 row**:
+     - **`Vils/Pop`:** `7–9 (8–10)` or `4–6 (5–7)`.
+     - **`Time`:** `MM:SS – MM:SS` spanning from the first villager's spawn/assignment to the last villager's spawn/assignment.
+     - **`Villager Assignment / Action`:** e.g. `Vils #7–#9 (3 vils) -> Wood (1st vil builds Lumber Camp [-100W], then all 3 on Wood)` or `Vils #12–#15 (4 vils) -> Chickens (1st vil builds House #3 [-25W] & Mill [-100W], all 4 on 7 Chickens)`.
      - **Villager Breakdown, Resource Bank & Army Badge:** Display the **end-of-group state** (the villager counts, resource stockpile, and `army_counts` after `Vil #B` is assigned).
      - **`Notes, Buildings & Army`:** Concatenate unique non-empty notes from the merged rows preceded by the end-of-group `Army:` badge.
-2. **Multi-TC Boom Villager Waves:**
-   - In mid-to-late Castle Age when 2–3 Town Centers are producing villagers continuously into Farms, Wood, and Gold, group consecutive villager spawns between major building/tech milestones into compressed wave rows (e.g., `36–48v (67 pop) | Vils #36–#48 (13 vils across 2 TCs) -> Seed Farms up to 14, Gold to 12 & Wood`).
-3. **Consecutive Farm Seeds & Military Queues:**
-   - Consecutive identical Farm placements (`Seed Horse Collar Farms #3–#5 (3 Farms, -60W each, 5s walk + 15s build).`) and consecutive identical military unit queues (`Queue Light Cavalry #3–#4 (2 units) at Stable...`) without intervening rows are compressed into a single row.
-4. **Preventing Artificial Row Splits:**
-   - Do not insert standalone informational rows (such as mid-hunt Boar #2 lure reminders at `04:43` or redundant `"Queue Unit #1"` logs right after a `"Building completes! Start Unit production"` row) in the middle of a continuous villager run. Fold that timing note into the `Notes, Buildings & Army` column of the corresponding villager row so consecutive villagers compress cleanly into 1 row.
+2. **High-Level Macro Phases (Feudal+ for non-FC builds; Castle+ for FC builds):**
+   - In Feudal Age and beyond (non-FC builds) and Castle Age and beyond (FC builds), combine repetitive villager spawns, farm placements (`every 60W`), houses, and continuous unit queues into **concise high-level macro priority blocks** with clear stopping criteria (e.g., `"Make vils continuously -> new vils to stragglers & seed Farms every 60W (up to 16 Farms), while producing Archers from 1 Range + Fletching, until clicking Castle Age (800F, 200G)"`).
+   - Do **not** list 20+ individual `Queue Archer #N` or `Build Farm #N` rows in Feudal/Castle Age; summarize each distinct macro phase as a milestone-bounded block while still sampling `resource_timeline` every 10s from the underlying 1-second simulation.
+3. **Preventing Artificial Row Splits:**
+   - Do not insert standalone informational rows (such as mid-hunt Boar #2 lure reminders or redundant `"Queue Unit #1"` logs) in the middle of a continuous villager run. Fold timing reminders into the `Notes, Buildings & Army` column of the corresponding villager row.
 
 ---
 

@@ -1,0 +1,145 @@
+{
+    "name": "Dravidians 20-Pop MAA -> Archers (7 Chickens Milled) (Path 3: 3 TC Boom First -> 2-Range Elephant Archers + Light Cav + Rams)",
+    "civilization": "Dravidians",
+    "author": "AoE2 Build Order Generator",
+    "source": "rules.md",
+    "description": "Dravidians 20-Pop (19v) 3 MAA -> Archers (7 Chickens Milled on Arabia) into Path 3: 3 TC Boom First -> 2-Range Elephant Archers + Light Cav + Rams. Includes 5s Boar-shooting TC garrison idling, updated animal caps (<=7 Sheep, 7-8 Boar / 10 transition), combined same-resource steps for Dark Age, and high-level macro loops with 92% Feudal / 90% Castle execution buffers.",
+    "build_order": [
+        {
+            "villager_count": 6,
+            "age": 1,
+            "resources": {
+                "wood": 0,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #1-#6: Build 2 Houses, then all 6 on @animal/Sheep_aoe2DE.png@ under TC (max 7 on Sheep)."
+            ]
+        },
+        {
+            "villager_count": 9,
+            "age": 1,
+            "resources": {
+                "wood": 3,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #7-#9 (3 vils) -> @resource/Aoe2de_wood.png@ (1st vil builds @lumber_camp/Lumber_camp_aoe2de.png@ first, then all 3 on Wood)."
+            ]
+        },
+        {
+            "villager_count": 11,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 7,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #10 lures 1st @animal/Boar_aoe2DE.png@ (garrison 7 TC vils 5s at 03:25 to shoot boar -> 6+ on Boar); Vil #11 to @resource/Aoe2de_wood.png@ (4 on Wood)."
+            ]
+        },
+        {
+            "villager_count": 15,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 11,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #12-#15 (4 vils) -> 7 Chickens (1st vil builds House #3 + @mill/Mill_aoe2de.png@ on Chickens, all 4 gather).",
+                "At 04:35, 1 hunter lures 2nd @animal/Boar_aoe2DE.png@ (garrison 7 TC vils 5s at 05:05 to shoot)."
+            ]
+        },
+        {
+            "villager_count": 19,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 14,
+                "gold": 1,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #16-#18 -> @animal/Boar_aoe2DE.png@/@animal/Sheep_aoe2DE.png@ under TC; Vil #19 builds House #4 -> LD @resource/Aoe2de_gold.png@.",
+                "Research @town_center/LoomDE.png@ -> Click @age/FeudalAgeIconDE_alpha.png@ (20 Pop / 19v, 0s TC idle)."
+            ]
+        },
+        {
+            "villager_count": 19,
+            "age": 2,
+            "resources": {
+                "wood": 7,
+                "food": 10,
+                "gold": 2,
+                "stone": 0
+            },
+            "notes": [
+                "Feudal Transition: 3 food vils -> @resource/Aoe2de_wood.png@ (1st builds @barracks/Barracks_aoe2DE.png@ -> House #5); @resource/Aoe2de_hammer.png@ @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_gold.png@ (2 on Gold); train 3 Militia."
+            ]
+        },
+        {
+            "villager_count": 35,
+            "age": 2,
+            "resources": {
+                "wood": 11,
+                "food": 17,
+                "gold": 7,
+                "stone": 0
+            },
+            "notes": [
+                "Feudal (+200W): MAA + @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@ + 1st @archery_range/Archery_range_aoe2DE.png@.",
+                "Macro Loop: Continuous Vils -> @resource/Aoe2de_gold.png@ to 4, @resource/Aoe2de_wood.png@ to 8, then stragglers & @mill/FarmDE.png@s every 60W (to 17 Farms) + 3 more to @resource/Aoe2de_gold.png@ (7 Gold) + @mining_camp/GoldMiningDE.png@; @blacksmith/Blacksmith_aoe2de.png@ -> @blacksmith/Fletching_aoe2DE.png@ + 1-Range @archery_range/Archer_aoe2DE.png@s; @town_center/WheelbarrowDE.png@ -> Click @age/CastleAgeIconDE_alpha.png@."
+            ]
+        },
+        {
+            "villager_count": 35,
+            "age": 3,
+            "resources": {
+                "wood": 11,
+                "food": 17,
+                "gold": 7,
+                "stone": 0
+            },
+            "notes": [
+                "Click @age/CastleAgeIconDE_alpha.png@ -> @resource/Aoe2de_hammer.png@ 2nd @archery_range/Archery_range_aoe2DE.png@ & Padded Archer Armor; keep 2-Range Archers continuous.",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (+200 @resource/Aoe2de_wood.png@!): research @archery_range/Crossbowman_aoe2DE.png@, @blacksmith/BodkinArrow_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@; pause Range & drop @town_center/Towncenter_aoe2DE.png@ #2 & #3!"
+            ]
+        },
+        {
+            "villager_count": 64,
+            "age": 3,
+            "resources": {
+                "wood": 11,
+                "food": 36,
+                "gold": 17,
+                "stone": 0
+            },
+            "notes": [
+                "3-TC Boom to ~49 @resource/MaleVillDE.jpg@s (23:43) while defending with 18 @archery_range/Crossbowman_aoe2DE.png@s; then unleash @archery_range/Elephant_archer_aoe2DE.png@s + @stable/Stable_aoe2DE.png@ -> @stable/Lightcavalry_aoe2DE.png@ + @siege_workshop/Siege_workshop_aoe2DE.png@!",
+                "Scale to 3-4 Ranges & 2 Stables when >58 @resource/MaleVillDE.jpg@s -> hit 50+ army (29:32) -> shift priority to click @age/ImperialAgeIconDE_alpha.png@ (30:44)!"
+            ]
+        },
+        {
+            "villager_count": 86,
+            "age": 4,
+            "resources": {
+                "wood": 19,
+                "food": 44,
+                "gold": 23,
+                "stone": 0
+            },
+            "notes": [
+                "Reach @age/ImperialAgeIconDE_alpha.png@ (33:54, +200W): Research Elite Elephant Archer, Bracer, Chemistry, Thumb Ring, @university/Ballistics_aoe2DE.png@ & Siege Elephant.",
+                "Trim excess Lumberjacks (Ele Archers cost 0W!) into Farms/Gold to keep float <500-1000 while flooding 60+ Ele Archers!"
+            ]
+        }
+    ]
+}

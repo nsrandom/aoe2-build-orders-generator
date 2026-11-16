@@ -97,6 +97,8 @@ class RuleConfig:
     building_walk_time_one_way: float = 10.0
     sequential_building_walk_time: float = 0.0
     boar_lure_walk_time_one_way: float = 15.0
+    boar_garrison_vils: int = 7  # 6-8 vils garrisoned in TC to shoot down boar
+    boar_garrison_seconds: float = 5.0
     camp_or_berry_walk_time_one_way: float = 15.0
     farm_walk_time: float = 5.0
     straggler_walk_time: float = 3.0
@@ -105,6 +107,9 @@ class RuleConfig:
     wood_refresh_lc_threshold: float = 0.65  # build new LC when efficiency drops to 60%-65%
     max_lumberjacks_per_lc: int = 8  # add 2nd LC when expanding to 9+ lumberjacks (subject to Wood Priority Rule)
     max_end_of_age_tc_idle_seconds: float = 5.0
+    # Imperfect human execution buffers for later stages (Feudal Age+ and Castle Age+)
+    feudal_macro_efficiency: float = 0.92
+    castle_macro_efficiency: float = 0.90
     # Assumed Market sell prices (Gold per 100 Food/Wood sold) per rules.md
     market_sell_gold_feudal: int = 70
     market_sell_gold_early_mid_castle: int = 50
@@ -120,15 +125,15 @@ ANIMALS: Dict[str, AnimalSpec] = {
         decay_rate=0.25,
         base_gather_rate=0.33,
         ideal_vils=6,
-        max_vils=8,
+        max_vils=7,
     ),
     "boar": AnimalSpec(
         name="boar",
         initial_food=340.0,
         decay_rate=0.40,
         base_gather_rate=0.41,
-        ideal_vils=7,
-        max_vils=9,
+        ideal_vils=8,
+        max_vils=9,  # up to 10 allowed during age-up transition phases
     ),
     "deer": AnimalSpec(
         name="deer",
@@ -136,7 +141,7 @@ ANIMALS: Dict[str, AnimalSpec] = {
         decay_rate=0.25,
         base_gather_rate=0.41,
         ideal_vils=4,
-        max_vils=6,
+        max_vils=7,
     ),
     "chicken": AnimalSpec(
         name="chicken",

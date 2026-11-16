@@ -63,8 +63,20 @@ RTS_ICONS: Dict[str, str] = {
     "chemistry": "@university/Chemistry_aoe2DE.png@",
     "light_cavalry": "@stable/Lightcavalry_aoe2DE.png@",
     "battering_ram": "@siege_workshop/Battering_ram_aoe2DE.png@",
+    "armored_elephant": "@siege_workshop/Armored_elephant_aoe2DE.png@",
     "trebuchet": "@castle/Trebuchet_aoe2DE.png@",
     "bombard_cannon": "@siege_workshop/Bombard_cannon_aoe2DE.png@",
+    "man_at_arms": "@barracks/Manatarms_aoe2DE.png@",
+    "long_swordsman": "@barracks/Longswordsman_aoe2DE.png@",
+    "spearman": "@barracks/Spearman_aoe2DE.png@",
+    "pikeman": "@barracks/Pikeman_aoe2DE.png@",
+    "archer": "@archery_range/Archer_aoe2DE.png@",
+    "crossbowman": "@archery_range/Crossbowman_aoe2DE.png@",
+    "elephant_archer": "@archery_range/Elephant_archer_aoe2DE.png@",
+    "fletching": "@blacksmith/Fletching_aoe2DE.png@",
+    "bodkin_arrow": "@blacksmith/BodkinArrow_aoe2DE.png@",
+    "gold_mining": "@mining_camp/GoldMiningDE.png@",
+    "house": "@other/House_aoe2DE.png@",
 }
 
 
@@ -159,14 +171,20 @@ _UNIT_DISPLAY_NAMES: Dict[str, Tuple[str, str]] = {
     "militia": ("Militia", "Militia"),
     "maa": ("MAA", "MAA"),
     "man_at_arms": ("MAA", "MAA"),
+    "longsword": ("Longsword", "Longswords"),
+    "long_swordsman": ("Longsword", "Longswords"),
+    "spearman": ("Spear", "Spears"),
+    "pikeman": ("Pike", "Pikes"),
     "archer": ("Archer", "Archers"),
-    "crossbow": ("Crossbow", "Crossbows"),
-    "crossbowman": ("Crossbow", "Crossbows"),
+    "crossbow": ("Xbow", "Xbows"),
+    "crossbowman": ("Xbow", "Xbows"),
+    "elephant_archer": ("Ele Archer", "Ele Archers"),
     "skirmisher": ("Skirm", "Skirms"),
     "genoese": ("Genoese", "Genoese"),
     "light_cav": ("Light Cav", "Light Cav"),
     "monk": ("Monk", "Monks"),
     "battering_ram": ("Ram", "Rams"),
+    "armored_elephant": ("Armored Ele", "Armored Eles"),
     "ram": ("Ram", "Rams"),
     "trebuchet": ("Treb", "Trebs"),
     "bombard_cannon": ("BBC", "BBCs"),
@@ -320,11 +338,57 @@ def _parse_vil_action(action: str) -> Optional[Tuple[int, int, str, str]]:
     return None
 
 
+def _extract_camp_resource(dest: str) -> Optional[Tuple[str, str]]:
+    """
+    Recognizes villager assignments targeting a gatherable resource, even when the first
+    villager builds a camp (Lumber Camp, Mill, Mining Camp) or House beforehand.
+    Returns (canonical_resource_key, build_clause_if_any).
+    """
+    # Strip trailing parenthetical / count details for resource matching
+    s = dest.strip()
+    parts = [p.strip() for p in s.split("->")]
+    last_part = parts[-1].lower()
+    build_prefix = " -> ".join(parts[:-1]).strip() if len(parts) > 1 else ""
+
+    # Do not merge military/tech buildings or farm seeding here
+    if any(b in s.lower() for b in ("barracks", "archery range", "stable", "blacksmith", "market", "siege", "castle", "monastery", "university", "town center", "farm #", "farms #")):
+        return None
+
+    res_key = None
+    for key, pats in (
+        ("wood", ("wood at lumber camp", "wood (lumber camp", "wood")),
+        ("sheep", ("sheep under tc", "sheep")),
+        ("boar", ("boar/sheep under tc", "boar under tc", "boar")),
+        ("deer", ("pushed deer under tc", "deer under tc", "deer")),
+        ("chicken", ("chickens at mill", "7 chickens", "chickens")),
+        ("berries", ("berries at mill", "berries")),
+        ("gold", ("gold at mining camp", "gold (mining camp", "gold")),
+        ("stone", ("stone at mining camp", "stone (mining camp", "stone")),
+    ):
+        if any(last_part.startswith(p) for p in pats):
+            res_key = key
+            break
+    if not res_key:
+        return None
+
+    # Check if the single step itself mentions building a camp or house
+    has_build = ("build " in s.lower()) or bool(build_prefix)
+    if has_build and not build_prefix:
+        # e.g. "Build House #4 (-25W) -> ..." already split above; or "Walk 15s + Build LC -> Wood"
+        return (res_key, s)
+    return (res_key, build_prefix)
+
+
 def _norm_vil_dest(dest: str) -> Optional[str]:
     low = dest.lower().strip()
-    # Do not merge unique building constructions (Houses, Camps, Mills), only gathering or Farm seeding
     if "build " in low and "farm #" not in low and "farms #" not in low:
+        camp_res = _extract_camp_resource(dest)
+        if camp_res is not None:
+            return f"gather:{camp_res[0]}"
         return None
+    camp_res = _extract_camp_resource(dest)
+    if camp_res is not None and not any(w in low for w in ("lure ", "long-distance")):
+        return f"gather:{camp_res[0]}"
     low = re.sub(r"(?:seed|build) farms? #\d+(?:[–-]#?\d+)?", "seed farm #n", low)
     low = re.sub(r"-60w(?: each)?", "-60w", low)
     low = re.sub(r";\s*\d+(?:/\d+)?\s+on\s+[a-z ]+", "; n on res", low)
@@ -375,6 +439,13 @@ def compress_build_rows(rows: List[DetailedBuildRow]) -> List[DetailedBuildRow]:
                 tc_tag = v1[2] if v1[2] == v2[2] else ""
                 tc_str = f", {tc_tag}" if tc_tag else ""
                 dest_final = v2[3]
+                # Preserve camp/house construction prefix from the first villager when merging same-resource vils
+                if "build " in v1[3].lower() and "build " not in v2[3].lower() and "farm" not in v1[3].lower():
+                    c1 = _extract_camp_resource(v1[3])
+                    if c1 and c1[1]:
+                        dest_final = f"{v2[3]} (1st vil: {c1[1]})"
+                    else:
+                        dest_final = f"{v2[3]} (1st vil: {v1[3]})"
                 # If farm seeding, rewrite 'Seed Farm #X' -> 'Seed Farms #A–#B'
                 fm1 = re.search(r"(Seed|Build) Farms? #(\d+)", v1[3])
                 fm2 = re.search(r"(Seed|Build) Farms? #(?:\d+[–-]#?)?(\d+)", v2[3])
@@ -753,6 +824,35 @@ def export_build_order_html(
 
         phase_sections_html = []
         for phase_name, phase_rows in phase_groups:
+            has_sheep = any(r.sheep_vils > 0 for r in phase_rows)
+            has_boar = any(r.boar_vils > 0 for r in phase_rows)
+            has_deer = any(r.deer_vils > 0 for r in phase_rows)
+            has_chicken = any(r.chicken_vils > 0 for r in phase_rows)
+            has_berries = any(r.berry_vils > 0 for r in phase_rows)
+            has_farms = any(r.farm_vils > 0 for r in phase_rows)
+
+            food_subcols: List[Tuple[str, str]] = []
+            if has_sheep:
+                food_subcols.append(("Sheep", "sheep_vils"))
+            if has_boar:
+                food_subcols.append(("Boar", "boar_vils"))
+            if has_deer or has_chicken:
+                dc_lbl = (
+                    "Chickens"
+                    if (has_chicken and not has_deer)
+                    else ("Deer" if (has_deer and not has_chicken) else "Deer/Chk")
+                )
+                food_subcols.append((dc_lbl, "deer_or_chk"))
+            if has_berries:
+                food_subcols.append(("Berries", "berry_vils"))
+            if has_farms:
+                food_subcols.append(("Farms", "farm_vils"))
+
+            has_food = any(r.food_vils > 0 for r in phase_rows) or bool(food_subcols)
+            has_wood = any(r.wood_vils > 0 for r in phase_rows)
+            has_gold = any(r.gold_vils > 0 for r in phase_rows)
+            has_stone = any(r.stone_vils > 0 for r in phase_rows)
+
             rows_html = []
             for r in phase_rows:
                 deer_or_chk = r.deer_vils if r.deer_vils > 0 else r.chicken_vils
@@ -774,26 +874,64 @@ def export_build_order_html(
                     f'<span class="bank-sep">/</span>'
                     f'<span class="bank-item"><span class="res-s">{r.bank_stone:.0f}</span>{icon_s}</span>'
                 )
+
+                food_cells = []
+                for _, attr in food_subcols:
+                    val = deer_or_chk if attr == "deer_or_chk" else int(getattr(r, attr))
+                    food_cells.append(f'<td class="mono center res-f-sub">{fmt_sub(val)}</td>')
+                if has_food:
+                    food_cells.append(f'<td class="mono center res-f">{r.food_vils}</td>')
+
+                other_res_cells = []
+                if has_wood:
+                    other_res_cells.append(f'<td class="mono center res-w">{r.wood_vils}</td>')
+                if has_gold:
+                    other_res_cells.append(f'<td class="mono center res-g">{r.gold_vils}</td>')
+                if has_stone:
+                    other_res_cells.append(f'<td class="mono center res-s">{r.stone_vils}</td>')
+
                 rows_html.append(
                     f"""
                     <tr>
                         <td class="mono center">{html.escape(r.pop)}</td>
                         <td class="mono center">{html.escape(r.timestamp)}</td>
                         <td>{action_html}</td>
-                        <td class="mono center res-f-sub">{fmt_sub(r.sheep_vils)}</td>
-                        <td class="mono center res-f-sub">{fmt_sub(r.boar_vils)}</td>
-                        <td class="mono center res-f-sub">{fmt_sub(deer_or_chk)}</td>
-                        <td class="mono center res-f-sub">{fmt_sub(r.berry_vils)}</td>
-                        <td class="mono center res-f-sub">{fmt_sub(r.farm_vils)}</td>
-                        <td class="mono center res-f">{r.food_vils}</td>
-                        <td class="mono center res-w">{r.wood_vils}</td>
-                        <td class="mono center res-g">{r.gold_vils}</td>
-                        <td class="mono center res-s">{r.stone_vils}</td>
+                        {''.join(food_cells)}
+                        {''.join(other_res_cells)}
                         <td class="mono center bank-cell">{bank_cell_html}</td>
                         <td class="notes">{notes_html}</td>
                     </tr>
                     """
                 )
+
+            if food_subcols:
+                food_hdr_top = (
+                    f'<th colspan="{len(food_subcols) + 1}" class="center food-group-hdr">'
+                    f'Food Villagers Breakdown</th>'
+                )
+                food_hdr_sub = (
+                    ''.join(f'<th class="center sub-hdr">{html.escape(lbl)}</th>' for lbl, _ in food_subcols)
+                    + f'<th class="center sub-hdr">Total {icon_f}</th>'
+                )
+                rowspan_attr = ' rowspan="2"'
+                sub_hdr_row = f"<tr>{food_hdr_sub}</tr>"
+            elif has_food:
+                food_hdr_top = f'<th class="center">Food {icon_f}</th>'
+                rowspan_attr = ""
+                sub_hdr_row = ""
+            else:
+                food_hdr_top = ""
+                rowspan_attr = ""
+                sub_hdr_row = ""
+
+            other_res_hdrs = []
+            if has_wood:
+                other_res_hdrs.append(f'<th{rowspan_attr} class="center">Wood {icon_w}</th>')
+            if has_gold:
+                other_res_hdrs.append(f'<th{rowspan_attr} class="center">Gold {icon_g}</th>')
+            if has_stone:
+                other_res_hdrs.append(f'<th{rowspan_attr} class="center">Stone {icon_s}</th>')
+
             start_ts = re.split(r"\s*[–-]\s*", phase_rows[0].timestamp.strip())[0]
             end_ts = re.split(r"\s*[–-]\s*", phase_rows[-1].timestamp.strip())[-1]
             row_cnt = len(phase_rows)
@@ -810,24 +948,15 @@ def export_build_order_html(
                             <table>
                                 <thead>
                                     <tr>
-                                        <th rowspan="2" class="center">Vils/Pop</th>
-                                        <th rowspan="2" class="center">Time</th>
-                                        <th rowspan="2">Villager Assignment / Action</th>
-                                        <th colspan="6" class="center food-group-hdr">Food Villagers Breakdown</th>
-                                        <th rowspan="2" class="center">Wood {icon_w}</th>
-                                        <th rowspan="2" class="center">Gold {icon_g}</th>
-                                        <th rowspan="2" class="center">Stone {icon_s}</th>
-                                        <th rowspan="2" class="center">Resource Bank</th>
-                                        <th rowspan="2">Notes, Buildings &amp; Army</th>
+                                        <th{rowspan_attr} class="center">Vils/Pop</th>
+                                        <th{rowspan_attr} class="center">Time</th>
+                                        <th{rowspan_attr}>Villager Assignment / Action</th>
+                                        {food_hdr_top}
+                                        {''.join(other_res_hdrs)}
+                                        <th{rowspan_attr} class="center">Resource Bank</th>
+                                        <th{rowspan_attr}>Notes, Buildings &amp; Army</th>
                                     </tr>
-                                    <tr>
-                                        <th class="center sub-hdr">Sheep</th>
-                                        <th class="center sub-hdr">Boar</th>
-                                        <th class="center sub-hdr">Deer/Chk</th>
-                                        <th class="center sub-hdr">Berries</th>
-                                        <th class="center sub-hdr">Farms</th>
-                                        <th class="center sub-hdr">Total {icon_f}</th>
-                                    </tr>
+                                    {sub_hdr_row}
                                 </thead>
                                 <tbody>
                                     {''.join(rows_html)}
