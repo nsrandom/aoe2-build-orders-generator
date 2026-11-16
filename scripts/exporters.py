@@ -602,13 +602,19 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
         if not pts:
             continue
         slim_pts = [
-            {"t": int(p["t"]), "ts": str(p["ts"]), "vils": int(p["vils"]), "mil": int(p["mil"])}
+            {
+                "t": int(p["t"]),
+                "ts": str(p["ts"]),
+                "vils": int(p["vils"]),
+                "mil": int(p["mil"]),
+                "total": int(p["vils"]) + int(p["mil"]),
+            }
             for p in pts
         ]
         max_t = max(max_t, max(int(p["t"]) for p in slim_pts))
         max_pop_raw = max(
             max_pop_raw,
-            max(max(int(p["vils"]), int(p["mil"])) for p in slim_pts),
+            max(int(p["total"]) for p in slim_pts),
         )
         short_lbl = re.sub(r"^Path\s*\d+:\s*", "", doc.variant_label).strip()
         series_data.append(
@@ -624,7 +630,7 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
     if not series_data:
         return ""
 
-    step_y = 10 if max_pop_raw <= 50 else 20
+    step_y = 10 if max_pop_raw <= 50 else (20 if max_pop_raw <= 140 else 40)
     max_y = max(step_y * 2, int(((max_pop_raw + step_y - 1) // step_y) * step_y))
 
     width, height = 860, 290
@@ -670,6 +676,7 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
         col = s["color"]
         vils_pts = " ".join(f"{x_of(p['t']):.1f},{y_of(p['vils']):.1f}" for p in s["pts"])
         mil_pts = " ".join(f"{x_of(p['t']):.1f},{y_of(p['mil']):.1f}" for p in s["pts"])
+        total_pts = " ".join(f"{x_of(p['t']):.1f},{y_of(p['total']):.1f}" for p in s["pts"])
         polylines_html.append(
             f'<polyline class="chart-line" stroke="{col}" '
             f'data-comp-strategy="{idx_s}" data-comp-metric="vils" points="{vils_pts}" />'
@@ -678,6 +685,10 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
             f'<polyline class="chart-line comp-line-mil" stroke="{col}" '
             f'data-comp-strategy="{idx_s}" data-comp-metric="mil" points="{mil_pts}" />'
         )
+        polylines_html.append(
+            f'<polyline class="chart-line comp-line-total chart-series-hidden" stroke="{col}" '
+            f'data-comp-strategy="{idx_s}" data-comp-metric="total" points="{total_pts}" />'
+        )
         hover_dots_html.append(
             f'<circle class="chart-hover-dot" id="comp-dot-{idx_s}-vils" '
             f'data-comp-dot-strategy="{idx_s}" data-comp-dot-metric="vils" r="4" fill="{col}" />'
@@ -685,6 +696,10 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
         hover_dots_html.append(
             f'<circle class="chart-hover-dot" id="comp-dot-{idx_s}-mil" '
             f'data-comp-dot-strategy="{idx_s}" data-comp-dot-metric="mil" r="4" fill="{col}" />'
+        )
+        hover_dots_html.append(
+            f'<circle class="chart-hover-dot" id="comp-dot-{idx_s}-total" '
+            f'data-comp-dot-strategy="{idx_s}" data-comp-dot-metric="total" r="4" fill="{col}" />'
         )
         toggles_html.append(
             f'<label class="chart-series-toggle">'
@@ -741,6 +756,13 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
                             <line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2.4" stroke-dasharray="5 3" />
                         </svg>
                         <span>Military Pop (Dashed)</span>
+                    </label>
+                    <label class="chart-series-toggle">
+                        <input type="checkbox" data-comp-toggle-metric="total">
+                        <svg class="comp-line-glyph" viewBox="0 0 22 10" aria-hidden="true">
+                            <line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="3" />
+                        </svg>
+                        <span>Total pop (only)</span>
                     </label>
                 </div>
                 <div class="chart-readout" id="strategy-comp-chart-readout">
@@ -1298,6 +1320,22 @@ def export_build_order_html(
         }}, {{ capture: true }});
 
         // 4. Interactive Resource Bank Chart: Series Toggles & Dual-Line Hover Readout
+        const svgMouseX = (svgEl, ev, vbW, vbH) => {{
+            if (typeof svgEl.createSVGPoint === 'function' && typeof svgEl.getScreenCTM === 'function') {{
+                const ctm = svgEl.getScreenCTM();
+                if (ctm) {{
+                    const pt = svgEl.createSVGPoint();
+                    pt.x = ev.clientX;
+                    pt.y = ev.clientY;
+                    return pt.matrixTransform(ctm.inverse()).x;
+                }}
+            }}
+            const rect = svgEl.getBoundingClientRect();
+            const scale = Math.min(rect.width / vbW, rect.height / vbH) || 1;
+            const offsetX = (rect.width - vbW * scale) / 2;
+            return (ev.clientX - rect.left - offsetX) / scale;
+        }};
+
         document.querySelectorAll('input[data-chart-id][data-series]').forEach((chk) => {{
             chk.addEventListener('change', () => {{
                 const chartId = chk.getAttribute('data-chart-id');
@@ -1343,8 +1381,7 @@ def export_build_order_html(
             const yOf = (v) => padT + plotH - (Math.max(0, Math.min(maxY, v)) / maxY) * plotH;
 
             svg.addEventListener('mousemove', (ev) => {{
-                const rect = svg.getBoundingClientRect();
-                const relX = ((ev.clientX - rect.left) / rect.width) * width;
+                const relX = svgMouseX(svg, ev, width, height);
                 const clampedX = Math.max(padL, Math.min(width - padR, relX));
                 const targetT = ((clampedX - padL) / plotW) * maxT;
 
@@ -1412,6 +1449,27 @@ def export_build_order_html(
             let compSeries = [];
             try {{ compSeries = JSON.parse(rawSeries || '[]'); }} catch (e) {{ compSeries = []; }}
 
+            const maxT = parseFloat(compSvg.getAttribute('data-max-t') || '1');
+            const maxY = parseFloat(compSvg.getAttribute('data-max-y') || '100');
+            const padL = parseFloat(compSvg.getAttribute('data-pad-l') || '52');
+            const padR = parseFloat(compSvg.getAttribute('data-pad-r') || '24');
+            const padT = parseFloat(compSvg.getAttribute('data-pad-t') || '24');
+            const padB = parseFloat(compSvg.getAttribute('data-pad-b') || '34');
+            const width = parseFloat(compSvg.getAttribute('data-width') || '860');
+            const height = parseFloat(compSvg.getAttribute('data-height') || '290');
+            const plotW = width - padL - padR;
+            const plotH = height - padT - padB;
+            const hline = document.getElementById('strategy-comp-chart-hline');
+            const readout = document.getElementById('strategy-comp-chart-readout');
+            let lastTargetT = maxT;
+
+            const xOf = (t) => padL + (t / maxT) * plotW;
+            const yOf = (v) => padT + plotH - (Math.max(0, Math.min(maxY, v)) / maxY) * plotH;
+            const fmtTime = (s) => {{
+                const sec = Math.max(0, Math.round(s));
+                return `${{String(Math.floor(sec / 60)).padStart(2, '0')}}:${{String(sec % 60).padStart(2, '0')}}`;
+            }};
+
             const syncCompVisibility = () => {{
                 const activeStrats = new Set();
                 document.querySelectorAll('input[data-comp-toggle-strategy]').forEach((chk) => {{
@@ -1430,42 +1488,7 @@ def export_build_order_html(
                 return {{ activeStrats, activeMetrics }};
             }};
 
-            document.querySelectorAll('input[data-comp-toggle-strategy], input[data-comp-toggle-metric]').forEach((chk) => {{
-                chk.addEventListener('change', syncCompVisibility);
-            }});
-
-            const maxT = parseFloat(compSvg.getAttribute('data-max-t') || '1');
-            const maxY = parseFloat(compSvg.getAttribute('data-max-y') || '100');
-            const padL = parseFloat(compSvg.getAttribute('data-pad-l') || '52');
-            const padR = parseFloat(compSvg.getAttribute('data-pad-r') || '24');
-            const padT = parseFloat(compSvg.getAttribute('data-pad-t') || '24');
-            const padB = parseFloat(compSvg.getAttribute('data-pad-b') || '34');
-            const width = parseFloat(compSvg.getAttribute('data-width') || '860');
-            const height = parseFloat(compSvg.getAttribute('data-height') || '290');
-            const plotW = width - padL - padR;
-            const plotH = height - padT - padB;
-            const hline = document.getElementById('strategy-comp-chart-hline');
-            const readout = document.getElementById('strategy-comp-chart-readout');
-
-            const xOf = (t) => padL + (t / maxT) * plotW;
-            const yOf = (v) => padT + plotH - (Math.max(0, Math.min(maxY, v)) / maxY) * plotH;
-            const fmtTime = (s) => {{
-                const sec = Math.max(0, Math.round(s));
-                return `${{String(Math.floor(sec / 60)).padStart(2, '0')}}:${{String(sec % 60).padStart(2, '0')}}`;
-            }};
-
-            compSvg.addEventListener('mousemove', (ev) => {{
-                if (!compSeries.length) return;
-                const rect = compSvg.getBoundingClientRect();
-                const relX = ((ev.clientX - rect.left) / rect.width) * width;
-                const clampedX = Math.max(padL, Math.min(width - padR, relX));
-                const targetT = ((clampedX - padL) / plotW) * maxT;
-                const cx = xOf(targetT);
-                if (hline) {{
-                    hline.setAttribute('x1', String(cx));
-                    hline.setAttribute('x2', String(cx));
-                    hline.style.opacity = '0.85';
-                }}
+            const renderCompReadout = (targetT, updateDots) => {{
                 const {{ activeStrats, activeMetrics }} = syncCompVisibility();
                 const parts = [`<span>Time: <strong>${{fmtTime(targetT)}}</strong></span>`];
                 compSeries.forEach((s) => {{
@@ -1480,20 +1503,29 @@ def export_build_order_html(
                     }}
                     const px = xOf(best.t);
                     const sOn = activeStrats.has(String(s.idx));
-                    const dotV = document.getElementById(`comp-dot-${{s.idx}}-vils`);
-                    const dotM = document.getElementById(`comp-dot-${{s.idx}}-mil`);
-                    if (dotV) {{
-                        dotV.setAttribute('cx', String(px));
-                        dotV.setAttribute('cy', String(yOf(best.vils)));
-                        dotV.style.opacity = (sOn && activeMetrics.has('vils')) ? '1' : '0';
-                    }}
-                    if (dotM) {{
-                        dotM.setAttribute('cx', String(px));
-                        dotM.setAttribute('cy', String(yOf(best.mil)));
-                        dotM.style.opacity = (sOn && activeMetrics.has('mil')) ? '1' : '0';
+                    if (updateDots) {{
+                        const dotV = document.getElementById(`comp-dot-${{s.idx}}-vils`);
+                        const dotM = document.getElementById(`comp-dot-${{s.idx}}-mil`);
+                        const dotT = document.getElementById(`comp-dot-${{s.idx}}-total`);
+                        if (dotV) {{
+                            dotV.setAttribute('cx', String(px));
+                            dotV.setAttribute('cy', String(yOf(best.vils)));
+                            dotV.style.opacity = (sOn && activeMetrics.has('vils')) ? '1' : '0';
+                        }}
+                        if (dotM) {{
+                            dotM.setAttribute('cx', String(px));
+                            dotM.setAttribute('cy', String(yOf(best.mil)));
+                            dotM.style.opacity = (sOn && activeMetrics.has('mil')) ? '1' : '0';
+                        }}
+                        if (dotT) {{
+                            dotT.setAttribute('cx', String(px));
+                            dotT.setAttribute('cy', String(yOf(best.total)));
+                            dotT.style.opacity = (sOn && activeMetrics.has('total')) ? '1' : '0';
+                        }}
                     }}
                     if (sOn) {{
                         const vals = [];
+                        if (activeMetrics.has('total')) vals.push(`${{best.total}} pop`);
                         if (activeMetrics.has('vils')) vals.push(`${{best.vils}}v`);
                         if (activeMetrics.has('mil')) vals.push(`${{best.mil}} mil`);
                         parts.push(
@@ -1504,6 +1536,37 @@ def export_build_order_html(
                     }}
                 }});
                 if (readout) readout.innerHTML = parts.join('');
+            }};
+
+            document.querySelectorAll('input[data-comp-toggle-strategy], input[data-comp-toggle-metric]').forEach((chk) => {{
+                chk.addEventListener('change', () => {{
+                    const metric = chk.getAttribute('data-comp-toggle-metric');
+                    if (metric === 'total') {{
+                        document.querySelectorAll('input[data-comp-toggle-metric="vils"], input[data-comp-toggle-metric="mil"]').forEach((mChk) => {{
+                            mChk.checked = !chk.checked;
+                        }});
+                    }} else if ((metric === 'vils' || metric === 'mil') && chk.checked) {{
+                        document.querySelectorAll('input[data-comp-toggle-metric="total"]').forEach((tChk) => {{
+                            tChk.checked = false;
+                        }});
+                    }}
+                    renderCompReadout(lastTargetT, false);
+                }});
+            }});
+
+            compSvg.addEventListener('mousemove', (ev) => {{
+                if (!compSeries.length) return;
+                const relX = svgMouseX(compSvg, ev, width, height);
+                const clampedX = Math.max(padL, Math.min(width - padR, relX));
+                const targetT = ((clampedX - padL) / plotW) * maxT;
+                lastTargetT = targetT;
+                const cx = xOf(targetT);
+                if (hline) {{
+                    hline.setAttribute('x1', String(cx));
+                    hline.setAttribute('x2', String(cx));
+                    hline.style.opacity = '0.85';
+                }}
+                renderCompReadout(targetT, true);
             }});
 
             compSvg.addEventListener('mouseleave', () => {{

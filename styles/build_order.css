@@ -807,6 +807,10 @@ tr:nth-child(even) {
     stroke-dasharray: 6 4;
 }
 
+.comp-line-total {
+    stroke-width: 2.8;
+}
+
 .comp-line-glyph {
     width: 22px;
     height: 10px;

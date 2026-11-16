@@ -50,7 +50,7 @@ Because build order guides can be long, **every section MUST be collapsible**:
 - **Strategy Comparison Population Chart (Top Section):**
   - Compares all $N$ strategies/variants on a single responsive `<svg class="strategy-chart-svg">` population chart from `00:00` through the maximum simulation timestamp.
   - Each strategy uses a distinct color: **Villager population** is plotted as a **solid** line and **Military population** as a **dashed** line (`stroke-dasharray`) of the same color.
-  - Interactive checkboxes allow toggling **each strategy** on/off as well as toggling **Villagers** and **Military** population curves globally, with an interactive hover readout showing per-strategy `Vils / Military` counts at any timestamp.
+  - Interactive checkboxes allow toggling **each strategy** on/off as well as toggling **Villagers**, **Military**, and **Total pop (only)** population curves globally (selecting **Total pop (only)** deselects Villagers/Military, unselecting it re-selects both Villagers and Military, and selecting either Villagers or Military deselects **Total pop (only)**), with an interactive hover readout showing per-strategy `Vils / Military` or `Total pop` counts at any timestamp.
 - **Resources Bank Over Time Chart (Per Variant Tab):**
 - Each variant tab includes a collapsible **Resources Bank Over Time** section containing a responsive inline `<svg class="resource-chart-svg">` chart:
   - **Series:** Plots `Food`, `Wood`, `Gold`, and `Stone` stockpiles from `00:00` through the end of the build using `doc.resource_timeline` (sampled every `10s` plus every build row event, or extracted automatically from `doc.rows`).
