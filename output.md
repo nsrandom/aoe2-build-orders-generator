@@ -35,17 +35,23 @@ All HTML reports are generated via `export_build_order_html(docs, title, output_
 - Every requested or map-dependent variant (e.g., `24+2` vs. `26+2 + Monastery & 2 Monks` vs. `26+2 No Monastery`, or `3 Deer Pushed` vs. `8 Chickens Milled` vs. `6 Chickens Long-Distance`) MUST be displayed in its own interactive top-level tab inside the single `<build_slug>.html` file.
 
 ### 2.3 Collapsible Sections (`<details open class="phase-block">`)
-Because build order guides can be long, **every section inside each variant tab MUST be collapsible**:
+Because build order guides can be long, **every section MUST be collapsible**:
 - Each section is rendered as a native `<details open class="phase-block">` disclosure element with `<summary class="phase-title">` as its first child:
-  1. **Steady-State & Telemetry Section** (`Steady-State & Telemetry`)
-  2. **Resources Bank Over Time Chart Section** (`Resources Bank Over Time`)
-  3. **Each Age / Phase Timeline Table Section** (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`)
+  1. **Strategy Comparison Section** (`Strategy Comparison`, placed above the variant tabs)
+  2. Inside each variant tab: **Resources Bank Over Time Chart Section** (`Resources Bank Over Time`)
+  3. Inside each variant tab: **Each Age / Phase Timeline Table Section** (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`)
+- *(Note: The standalone `Steady-State & Telemetry` card is removed in favor of the cross-strategy population comparison chart.)*
 - **Accessibility & Styling Rules:**
   - Do **not** place heading elements (`<h3>`, `<h4>`) inside `<summary>` (so screen readers do not strip heading semantics).
   - Hide the default marker (`list-style: none`) and render an animated directional chevron right before the summary label via `.phase-title::before` and `.phase-block[open] > .phase-title::before`.
   - Provide an **Expand all sections / Collapse all sections** button (`.toggle-all-btn` with `aria-expanded="true"`) in each variant header that toggles all `<details class="phase-block">` elements in that tab and stays synchronized via a capturing `toggle` listener.
 
-### 2.4 Interactive Resources Bank Over Time Chart
+### 2.4 Interactive Strategy Comparison & Resource Bank Charts
+- **Strategy Comparison Population Chart (Top Section):**
+  - Compares all $N$ strategies/variants on a single responsive `<svg class="strategy-chart-svg">` population chart from `00:00` through the maximum simulation timestamp.
+  - Each strategy uses a distinct color: **Villager population** is plotted as a **solid** line and **Military population** as a **dashed** line (`stroke-dasharray`) of the same color.
+  - Interactive checkboxes allow toggling **each strategy** on/off as well as toggling **Villagers** and **Military** population curves globally, with an interactive hover readout showing per-strategy `Vils / Military` counts at any timestamp.
+- **Resources Bank Over Time Chart (Per Variant Tab):**
 - Each variant tab includes a collapsible **Resources Bank Over Time** section containing a responsive inline `<svg class="resource-chart-svg">` chart:
   - **Series:** Plots `Food`, `Wood`, `Gold`, and `Stone` stockpiles from `00:00` through the end of the build using `doc.resource_timeline` (sampled every `10s` plus every build row event, or extracted automatically from `doc.rows`).
   - **Staggered Age Milestone Markers:** Vertical dashed lines mark key age-click and age-arrival timestamps (`Feudal Click`, `Feudal Age`, `Castle Click`, `Castle Age`, `Imp Click`, `Imp Age`), with labels arranged across 4 vertical lanes (`y = 20, 38, 56, 74`) using collision detection so adjacent milestone labels never overlap horizontally.

@@ -527,13 +527,8 @@ def _fmt_sec_mmss(sec: int) -> str:
     return f"{sec // 60:02d}:{sec % 60:02d}"
 
 
-def _build_resource_chart_html(doc: BuildOrderDocument, tab_idx: int, icon_dir_rel: str) -> str:
-    """
-    Renders an interactive SVG chart of the Resource Bank (Food, Wood, Gold, Stone) over time,
-    complete with age milestone lines, series toggle checkboxes, and two fixed-line hover readouts:
-      1. Resource bank readout with standard AoE2 icons (always on its own line)
-      2. Total Vils & Military counts, followed by Military Distribution (on the line below)
-    """
+def _extract_timeline_points(doc: BuildOrderDocument) -> List[Dict[str, object]]:
+    """Extracts deduplicated timeline points from `doc.resource_timeline` (or falls back to `doc.rows`)."""
     points: List[Dict[str, object]] = []
     if doc.resource_timeline:
         for p in doc.resource_timeline:
@@ -571,15 +566,217 @@ def _build_resource_chart_html(doc: BuildOrderDocument, tab_idx: int, icon_dir_r
                 }
             )
 
-    if not points:
-        return ""
-
     cleaned_pts: List[Dict[str, object]] = []
     for pt in points:
         if cleaned_pts and int(cleaned_pts[-1]["t"]) == int(pt["t"]):
             cleaned_pts[-1] = pt
         else:
             cleaned_pts.append(pt)
+    return cleaned_pts
+
+
+_STRATEGY_PALETTE = [
+    "#2563eb",  # Blue
+    "#d97706",  # Amber
+    "#059669",  # Emerald
+    "#dc2626",  # Crimson
+    "#7c3aed",  # Violet
+    "#0891b2",  # Cyan
+]
+
+
+def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
+    """
+    Renders the collapsible Strategy Comparison section comparing all strategies
+    using population line charts: solid = villager pop, dashed = military pop (same color per strategy),
+    with checkboxes to show/hide each strategy and Villager/Military lines plus hover readout.
+    """
+    if not docs:
+        return ""
+
+    series_data = []
+    max_t = 1
+    max_pop_raw = 20
+    for idx, doc in enumerate(docs):
+        pts = _extract_timeline_points(doc)
+        if not pts:
+            continue
+        slim_pts = [
+            {"t": int(p["t"]), "ts": str(p["ts"]), "vils": int(p["vils"]), "mil": int(p["mil"])}
+            for p in pts
+        ]
+        max_t = max(max_t, max(int(p["t"]) for p in slim_pts))
+        max_pop_raw = max(
+            max_pop_raw,
+            max(max(int(p["vils"]), int(p["mil"])) for p in slim_pts),
+        )
+        short_lbl = re.sub(r"^Path\s*\d+:\s*", "", doc.variant_label).strip()
+        series_data.append(
+            {
+                "idx": idx,
+                "label": doc.variant_label,
+                "short_label": short_lbl,
+                "color": _STRATEGY_PALETTE[idx % len(_STRATEGY_PALETTE)],
+                "pts": slim_pts,
+            }
+        )
+
+    if not series_data:
+        return ""
+
+    step_y = 10 if max_pop_raw <= 50 else 20
+    max_y = max(step_y * 2, int(((max_pop_raw + step_y - 1) // step_y) * step_y))
+
+    width, height = 860, 290
+    pad_l, pad_r, pad_t, pad_b = 52, 24, 24, 34
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    def x_of(t_val: float) -> float:
+        return pad_l + (t_val / max_t) * plot_w
+
+    def y_of(v_val: float) -> float:
+        clamped = max(0.0, min(float(max_y), v_val))
+        return pad_t + plot_h - (clamped / max_y) * plot_h
+
+    y_grid_html = []
+    num_y_ticks = max(2, max_y // step_y)
+    for i in range(num_y_ticks + 1):
+        val = i * step_y
+        yp = y_of(val)
+        y_grid_html.append(
+            f'<line x1="{pad_l}" y1="{yp:.1f}" x2="{width - pad_r}" y2="{yp:.1f}" class="chart-grid-line" />'
+            f'<text x="{pad_l - 8}" y="{yp + 4:.1f}" text-anchor="end" class="chart-axis-label">{val}</text>'
+        )
+
+    x_step_sec = 120 if max_t <= 1200 else 180
+    x_grid_html = []
+    t_tick = 0
+    while t_tick <= max_t:
+        xp = x_of(t_tick)
+        x_grid_html.append(
+            f'<line x1="{xp:.1f}" y1="{pad_t}" x2="{xp:.1f}" y2="{height - pad_b}" class="chart-grid-line" />'
+            f'<text x="{xp:.1f}" y="{height - pad_b + 18}" text-anchor="middle" class="chart-axis-label">{_fmt_sec_mmss(t_tick)}</text>'
+        )
+        t_tick += x_step_sec
+
+    polylines_html = []
+    hover_dots_html = []
+    toggles_html = []
+    end_readout_parts = [f"<span>Time: <strong>{_fmt_sec_mmss(max_t)}</strong></span>"]
+
+    for s in series_data:
+        idx_s = s["idx"]
+        col = s["color"]
+        vils_pts = " ".join(f"{x_of(p['t']):.1f},{y_of(p['vils']):.1f}" for p in s["pts"])
+        mil_pts = " ".join(f"{x_of(p['t']):.1f},{y_of(p['mil']):.1f}" for p in s["pts"])
+        polylines_html.append(
+            f'<polyline class="chart-line" stroke="{col}" '
+            f'data-comp-strategy="{idx_s}" data-comp-metric="vils" points="{vils_pts}" />'
+        )
+        polylines_html.append(
+            f'<polyline class="chart-line comp-line-mil" stroke="{col}" '
+            f'data-comp-strategy="{idx_s}" data-comp-metric="mil" points="{mil_pts}" />'
+        )
+        hover_dots_html.append(
+            f'<circle class="chart-hover-dot" id="comp-dot-{idx_s}-vils" '
+            f'data-comp-dot-strategy="{idx_s}" data-comp-dot-metric="vils" r="4" fill="{col}" />'
+        )
+        hover_dots_html.append(
+            f'<circle class="chart-hover-dot" id="comp-dot-{idx_s}-mil" '
+            f'data-comp-dot-strategy="{idx_s}" data-comp-dot-metric="mil" r="4" fill="{col}" />'
+        )
+        toggles_html.append(
+            f'<label class="chart-series-toggle">'
+            f'<input type="checkbox" checked data-comp-toggle-strategy="{idx_s}">'
+            f'<span class="swatch" style="background:{col}"></span>'
+            f'<span>{html.escape(str(s["label"]))}</span>'
+            f'</label>'
+        )
+        last_p = s["pts"][-1]
+        end_readout_parts.append(
+            f'<span>|</span>'
+            f'<span><span class="swatch" style="background:{col};margin-right:4px"></span>'
+            f'<strong>{html.escape(str(s["short_label"]))}:</strong> '
+            f'{last_p["vils"]}v / {last_p["mil"]} mil</span>'
+        )
+
+    payload_json = html.escape(
+        json.dumps(
+            [
+                {
+                    "idx": s["idx"],
+                    "label": s["short_label"],
+                    "color": s["color"],
+                    "pts": s["pts"],
+                }
+                for s in series_data
+            ]
+        )
+    )
+
+    strat_cnt = len(series_data)
+    return f"""
+    <details open class="phase-block strategy-comp-block">
+        <summary class="phase-title">
+            <span class="badge">Strategy Comparison</span>
+            <span class="phase-range mono">00:00 &rarr; {_fmt_sec_mmss(max_t)}</span>
+            <span class="phase-row-count">{strat_cnt} {"strategy" if strat_cnt == 1 else "strategies"} &middot; Villagers (solid) vs Military (dashed)</span>
+        </summary>
+        <div class="phase-body">
+            <div class="chart-controls">
+                <div class="comp-legend-row" role="group" aria-label="Toggle strategies and population types">
+                    {''.join(toggles_html)}
+                    <span class="comp-legend-divider" aria-hidden="true">|</span>
+                    <label class="chart-series-toggle">
+                        <input type="checkbox" checked data-comp-toggle-metric="vils">
+                        <svg class="comp-line-glyph" viewBox="0 0 22 10" aria-hidden="true">
+                            <line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2.4" />
+                        </svg>
+                        <span>Villager Pop (Solid)</span>
+                    </label>
+                    <label class="chart-series-toggle">
+                        <input type="checkbox" checked data-comp-toggle-metric="mil">
+                        <svg class="comp-line-glyph" viewBox="0 0 22 10" aria-hidden="true">
+                            <line x1="1" y1="5" x2="21" y2="5" stroke="currentColor" stroke-width="2.4" stroke-dasharray="5 3" />
+                        </svg>
+                        <span>Military Pop (Dashed)</span>
+                    </label>
+                </div>
+                <div class="chart-readout" id="strategy-comp-chart-readout">
+                    {''.join(end_readout_parts)}
+                </div>
+            </div>
+            <div class="chart-svg-wrap">
+                <svg id="strategy-comp-chart" class="strategy-chart-svg" viewBox="0 0 {width} {height}"
+                     role="img" aria-label="Strategy population comparison chart"
+                     data-comp-series="{payload_json}" data-max-t="{max_t}" data-max-y="{max_y}"
+                     data-pad-l="{pad_l}" data-pad-r="{pad_r}" data-pad-t="{pad_t}" data-pad-b="{pad_b}"
+                     data-width="{width}" data-height="{height}">
+                    {''.join(y_grid_html)}
+                    {''.join(x_grid_html)}
+                    <line x1="{pad_l}" y1="{height - pad_b}" x2="{width - pad_r}" y2="{height - pad_b}" class="chart-axis-line" />
+                    <line x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{height - pad_b}" class="chart-axis-line" />
+                    {''.join(polylines_html)}
+                    <line class="chart-hover-line" id="strategy-comp-chart-hline" x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{height - pad_b}" />
+                    {''.join(hover_dots_html)}
+                </svg>
+            </div>
+        </div>
+    </details>
+    """
+
+
+def _build_resource_chart_html(doc: BuildOrderDocument, tab_idx: int, icon_dir_rel: str) -> str:
+    """
+    Renders an interactive SVG chart of the Resource Bank (Food, Wood, Gold, Stone) over time,
+    complete with age milestone lines, series toggle checkboxes, and two fixed-line hover readouts:
+      1. Resource bank readout with standard AoE2 icons (always on its own line)
+      2. Total Vils & Military counts, followed by Military Distribution (on the line below)
+    """
+    cleaned_pts = _extract_timeline_points(doc)
+    if not cleaned_pts:
+        return ""
 
     max_t = max(int(p["t"]) for p in cleaned_pts) or 1
     max_val_raw = max(
@@ -968,55 +1165,6 @@ def export_build_order_html(
                 """
             )
 
-        ss_html = ""
-        if doc.steady_state_summary:
-            rec = doc.steady_state_summary.get("recommended_vils", {})
-            ex = doc.steady_state_summary.get("exact_vils", {})
-            ss_title = doc.steady_state_summary.get(
-                "title",
-                "Steady-State Continuous Production Target",
-            )
-            rot_info = doc.telemetry_summary.get("rotted_food", {})
-            tot_rot = doc.telemetry_summary.get("total_rotted_food", 0)
-            rot_str = (
-                f"Sheep: {rot_info.get('sheep', 0)}{icon_f} &middot; "
-                f"Boar: {rot_info.get('boar', 0)}{icon_f} &middot; "
-                f"Deer: {rot_info.get('deer', 0)}{icon_f} &middot; "
-                f"Chicken: {rot_info.get('chicken', 0)}{icon_f} "
-                f"(Total Rot: <strong>{tot_rot}</strong>{icon_f})"
-                if rot_info
-                else ""
-            )
-            final_army_str = format_army_counts(doc.rows[-1].army_counts) if doc.rows else ""
-            final_army_html = (
-                f'<p><strong>Final Army by Type:</strong> <span class="army-badge">{html.escape(final_army_str)}</span></p>'
-                if final_army_str
-                else ""
-            )
-            ss_html = f"""
-            <details open class="phase-block">
-                <summary class="phase-title">
-                    <span class="badge">Steady-State &amp; Telemetry</span>
-                    <span class="phase-range">{html.escape(str(ss_title))}</span>
-                </summary>
-                <div class="phase-body">
-                    <div class="summary-card">
-                        <p>
-                            <strong>Recommended Minimum Villagers:</strong>
-                            <span class="res-f">{rec.get('food', 0)} Food</span>{icon_f} &middot;
-                            <span class="res-w">{rec.get('wood', 0)} Wood</span>{icon_w} &middot;
-                            <span class="res-g">{rec.get('gold', 0)} Gold</span>{icon_g} &middot;
-                            <span class="res-s">{rec.get('stone', 0)} Stone</span>{icon_s}
-                            (Total: <strong>{rec.get('total', 0)}</strong> vils; exact:
-                            {ex.get('food', 0)}{icon_f} / {ex.get('wood', 0)}{icon_w} / {ex.get('gold', 0)}{icon_g} / {ex.get('stone', 0)}{icon_s})
-                        </p>
-                        {f'<p><strong>Simulated Animal Rot Telemetry:</strong> {rot_str}</p>' if rot_str else ''}
-                        {final_army_html}
-                    </div>
-                </div>
-            </details>
-            """
-
         chart_html = _build_resource_chart_html(doc, idx, icon_dir_rel)
 
         tab_panels_html.append(
@@ -1030,12 +1178,13 @@ def export_build_order_html(
                     </button>
                 </div>
                 <p class="desc">{_replace_res_abbr_with_icons(html.escape(doc.description), icon_dir_rel)}</p>
-                {ss_html}
                 {chart_html}
                 {''.join(phase_sections_html)}
             </section>
             """
         )
+
+    strategy_comp_html = _build_strategy_comparison_html(docs)
 
     page = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1080,6 +1229,7 @@ def export_build_order_html(
         </div>
     </header>
     <main>
+        {strategy_comp_html}
         <div class="tab-bar" role="tablist">
             {''.join(tab_buttons_html)}
         </div>
@@ -1254,6 +1404,113 @@ def export_build_order_html(
                 [dotF, dotW, dotG, dotS].forEach((d) => {{ if (d) d.style.opacity = '0'; }});
             }});
         }});
+
+        // 5. Strategy Comparison Population Chart: Strategy + Metric Toggles & Hover Readout
+        const compSvg = document.getElementById('strategy-comp-chart');
+        if (compSvg) {{
+            const rawSeries = compSvg.getAttribute('data-comp-series');
+            let compSeries = [];
+            try {{ compSeries = JSON.parse(rawSeries || '[]'); }} catch (e) {{ compSeries = []; }}
+
+            const syncCompVisibility = () => {{
+                const activeStrats = new Set();
+                document.querySelectorAll('input[data-comp-toggle-strategy]').forEach((chk) => {{
+                    if (chk.checked) activeStrats.add(chk.getAttribute('data-comp-toggle-strategy'));
+                }});
+                const activeMetrics = new Set();
+                document.querySelectorAll('input[data-comp-toggle-metric]').forEach((chk) => {{
+                    if (chk.checked) activeMetrics.add(chk.getAttribute('data-comp-toggle-metric'));
+                }});
+                compSvg.querySelectorAll('[data-comp-strategy][data-comp-metric]').forEach((line) => {{
+                    const sId = line.getAttribute('data-comp-strategy');
+                    const mId = line.getAttribute('data-comp-metric');
+                    const show = activeStrats.has(sId) && activeMetrics.has(mId);
+                    line.classList.toggle('chart-series-hidden', !show);
+                }});
+                return {{ activeStrats, activeMetrics }};
+            }};
+
+            document.querySelectorAll('input[data-comp-toggle-strategy], input[data-comp-toggle-metric]').forEach((chk) => {{
+                chk.addEventListener('change', syncCompVisibility);
+            }});
+
+            const maxT = parseFloat(compSvg.getAttribute('data-max-t') || '1');
+            const maxY = parseFloat(compSvg.getAttribute('data-max-y') || '100');
+            const padL = parseFloat(compSvg.getAttribute('data-pad-l') || '52');
+            const padR = parseFloat(compSvg.getAttribute('data-pad-r') || '24');
+            const padT = parseFloat(compSvg.getAttribute('data-pad-t') || '24');
+            const padB = parseFloat(compSvg.getAttribute('data-pad-b') || '34');
+            const width = parseFloat(compSvg.getAttribute('data-width') || '860');
+            const height = parseFloat(compSvg.getAttribute('data-height') || '290');
+            const plotW = width - padL - padR;
+            const plotH = height - padT - padB;
+            const hline = document.getElementById('strategy-comp-chart-hline');
+            const readout = document.getElementById('strategy-comp-chart-readout');
+
+            const xOf = (t) => padL + (t / maxT) * plotW;
+            const yOf = (v) => padT + plotH - (Math.max(0, Math.min(maxY, v)) / maxY) * plotH;
+            const fmtTime = (s) => {{
+                const sec = Math.max(0, Math.round(s));
+                return `${{String(Math.floor(sec / 60)).padStart(2, '0')}}:${{String(sec % 60).padStart(2, '0')}}`;
+            }};
+
+            compSvg.addEventListener('mousemove', (ev) => {{
+                if (!compSeries.length) return;
+                const rect = compSvg.getBoundingClientRect();
+                const relX = ((ev.clientX - rect.left) / rect.width) * width;
+                const clampedX = Math.max(padL, Math.min(width - padR, relX));
+                const targetT = ((clampedX - padL) / plotW) * maxT;
+                const cx = xOf(targetT);
+                if (hline) {{
+                    hline.setAttribute('x1', String(cx));
+                    hline.setAttribute('x2', String(cx));
+                    hline.style.opacity = '0.85';
+                }}
+                const {{ activeStrats, activeMetrics }} = syncCompVisibility();
+                const parts = [`<span>Time: <strong>${{fmtTime(targetT)}}</strong></span>`];
+                compSeries.forEach((s) => {{
+                    let best = s.pts[0];
+                    let bestDist = Math.abs(best.t - targetT);
+                    for (let i = 1; i < s.pts.length; i++) {{
+                        const d = Math.abs(s.pts[i].t - targetT);
+                        if (d < bestDist) {{
+                            best = s.pts[i];
+                            bestDist = d;
+                        }}
+                    }}
+                    const px = xOf(best.t);
+                    const sOn = activeStrats.has(String(s.idx));
+                    const dotV = document.getElementById(`comp-dot-${{s.idx}}-vils`);
+                    const dotM = document.getElementById(`comp-dot-${{s.idx}}-mil`);
+                    if (dotV) {{
+                        dotV.setAttribute('cx', String(px));
+                        dotV.setAttribute('cy', String(yOf(best.vils)));
+                        dotV.style.opacity = (sOn && activeMetrics.has('vils')) ? '1' : '0';
+                    }}
+                    if (dotM) {{
+                        dotM.setAttribute('cx', String(px));
+                        dotM.setAttribute('cy', String(yOf(best.mil)));
+                        dotM.style.opacity = (sOn && activeMetrics.has('mil')) ? '1' : '0';
+                    }}
+                    if (sOn) {{
+                        const vals = [];
+                        if (activeMetrics.has('vils')) vals.push(`${{best.vils}}v`);
+                        if (activeMetrics.has('mil')) vals.push(`${{best.mil}} mil`);
+                        parts.push(
+                            `<span>|</span>` +
+                            `<span><span class="swatch" style="background:${{s.color}};margin-right:4px"></span>` +
+                            `<strong>${{s.label}}:</strong> ${{vals.length ? vals.join(' / ') : 'hidden'}}</span>`
+                        );
+                    }}
+                }});
+                if (readout) readout.innerHTML = parts.join('');
+            }});
+
+            compSvg.addEventListener('mouseleave', () => {{
+                if (hline) hline.style.opacity = '0';
+                compSvg.querySelectorAll('[data-comp-dot-strategy]').forEach((d) => {{ d.style.opacity = '0'; }});
+            }});
+        }}
     </script>
 </body>
 </html>

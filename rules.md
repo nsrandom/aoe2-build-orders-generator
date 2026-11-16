@@ -87,7 +87,7 @@ See `/Users/asif/Projects/aoe/build-orders/gemini/output.md` for the complete ou
    - **Top-Level Tab Views:** Present all requested or map-dependent variants as top-level tabs.
    - **Sectioned Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`).
    - **Same-Resource & High-Level Macro Compression:** Consecutive villagers going to the same resource (including building the camp/house first) are combined into 1 row, and Feudal+ (non-FC) / Castle+ (FC) phases use high-level macro priority blocks.
-   - **Steady-State Target Summary & Rot/Efficiency Telemetry**
+   - **Strategy Comparison Section:** Interactive population line chart comparing all strategies (solid lines for Villager population, dashed lines of the same color for Military population), with checkboxes to show/hide each strategy as well as Villager and Military series.
 3. **RTS Overlay Compatible JSON (`.json`):**
    - Follows the `RTS_Overlay` / `AoE Overlay` schema (`name`, `civilization`, `author`, `source`, `description`, `build_order` array of `{villager_count, age, resources: {wood, food, gold, stone}, notes}` using `@category/icon@` asset tags).
    - Same-resource villager steps (including camp/house builders) are combined into a single step, and later stages use concise macro priority steps.
