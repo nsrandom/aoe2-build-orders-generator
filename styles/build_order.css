@@ -583,6 +583,24 @@ th .res-icon,
 
 .bank-cell {
     white-space: nowrap;
+    width: 1%;
+    line-height: 1.45;
+}
+
+.col-action,
+.action-cell {
+    width: 32%;
+    min-width: 260px;
+}
+
+.col-bank {
+    width: 1%;
+}
+
+.col-notes,
+.notes {
+    width: 24%;
+    overflow-wrap: break-word;
 }
 
 .bank-item {
@@ -771,7 +789,8 @@ tr:nth-child(even) {
     font-weight: 700;
     margin-right: 6px;
     margin-bottom: 2px;
-    white-space: nowrap;
+    white-space: normal;
+    max-width: 100%;
 }
 
 /* Strategy Comparison Population Chart */

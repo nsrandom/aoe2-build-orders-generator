@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <script>
+        try {
+            const savedScheme = localStorage.getItem("color-scheme");
+            if (savedScheme === "light" || savedScheme === "dark") {
+                document.querySelector('meta[name="color-scheme"]').content = savedScheme;
+            }
+        } catch (e) {}
+    </script>
+    <title>Build Orders Index | AoE2:DE</title>
+    <link rel="stylesheet" href="../styles/build_order.css">
+    <style>
+        .builds-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .builds-intro {
+            color: var(--muted);
+            margin: 0 0 16px 0;
+        }
+
+        .build-list {
+            margin: 0;
+            padding-left: 1.5rem;
+        }
+
+        .build-item {
+            padding-block: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .build-item:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+
+        .build-item:last-child {
+            padding-bottom: 0;
+        }
+
+        .build-header {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 6px 12px;
+        }
+
+        .build-title-link {
+            color: var(--text);
+            font-size: 1.08rem;
+            font-weight: 700;
+            text-decoration: underline;
+            text-decoration-color: var(--border-strong);
+            text-underline-offset: 3px;
+            padding-block: 2px;
+        }
+
+        .build-title-link:hover {
+            color: var(--accent);
+            text-decoration-color: var(--accent);
+        }
+
+        .build-meta {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .variant-sublist {
+            margin: 8px 0 0 0;
+            padding-left: 1.5rem;
+            list-style-type: disc;
+        }
+
+        .variant-item {
+            margin-block: 6px;
+            line-height: 1.5;
+        }
+
+        .variant-links {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px 10px;
+            margin-left: 6px;
+        }
+
+        .resource-link {
+            display: inline-flex;
+            align-items: center;
+            min-block-size: 24px;
+            padding: 2px 10px;
+            border-radius: 999px;
+            background: var(--surface-subtle);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .resource-link:hover {
+            background: var(--surface-hover);
+            border-color: var(--border-strong);
+            color: var(--accent);
+        }
+
+        :where(a:any-link, button):focus-visible {
+            outline: 3px solid var(--accent);
+            outline-offset: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header class="page-header">
+        <h1>AoE2:DE Build Orders Index</h1>
+        <div class="header-actions">
+            <button type="button" class="theme-toggle" id="theme-toggle-btn">
+                <span class="theme-toggle-option theme-option-dark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span>Dark mode</span>
+                </span>
+                <span class="theme-toggle-option theme-option-light">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <span>Light mode</span>
+                </span>
+            </button>
+        </div>
+    </header>
+    <main>
+        <section class="builds-card" aria-labelledby="all-builds-heading">
+            <h2 id="all-builds-heading">All Simulated Build Orders</h2>
+            <p class="builds-intro">Interactive HTML build guides and RTS Overlay JSON exports simulated against <code>rules.md</code>.</p>
+            <ol class="build-list">
+                <li class="build-item">
+                    <div class="build-header">
+                        <a class="build-title-link" href="bohemians_arena_fc_hand_cannons/bohemians_arena_fc_hand_cannons.html">Bohemians Arena Fast Castle (1-TC Early Hand Cannoneers)</a>
+                        <span class="build-meta">24+2 1-TC Fast Hand Cannons -&gt; Monastery &amp; 2 Monks, 3 Ranges, Mangonels, Pikes, TC #2/#3, Forward Castle &amp; Imperial Push</span>
+                        <span class="variant-links">
+                            <a class="resource-link" href="bohemians_arena_fc_hand_cannons/bohemians_arena_fc_hand_cannons_24p2_1tc_fast_hc.json" aria-label="RTS Overlay JSON for Bohemians Arena Fast Castle 24+2 1-TC Fast Hand Cannons">RTS Overlay JSON</a>
+                        </span>
+                    </div>
+                </li>
+                <li class="build-item">
+                    <div class="build-header">
+                        <a class="build-title-link" href="dravidian_maa_into_archers/dravidian_maa_into_archers.html">Dravidians 20-Pop Men-at-Arms into Archers</a>
+                        <span class="build-meta">3 Castle Age Paths (6 Chickens Milled, Checked with 8)</span>
+                    </div>
+                    <ul class="variant-sublist">
+                        <li class="variant-item">
+                            <span>Path 1: 1 TC -&gt; 2-Range Crossbowmen + Light Cavalry + 3 Armored Elephants</span>
+                            <span class="variant-links">
+                                <a class="resource-link" href="dravidian_maa_into_archers/dravidians_maa_xbow_lc_ram.json" aria-label="RTS Overlay JSON for Dravidians Path 1: 1 TC into 2-Range Crossbowmen, Light Cavalry, and 3 Armored Elephants">RTS Overlay JSON</a>
+                            </span>
+                        </li>
+                        <li class="variant-item">
+                            <span>Path 2: 1 TC -&gt; 2-Range Crossbowmen + 2-Barracks Longswords/Pikemen + 3 Armored Elephants</span>
+                            <span class="variant-links">
+                                <a class="resource-link" href="dravidian_maa_into_archers/dravidians_maa_xbow_ls_spear_ram.json" aria-label="RTS Overlay JSON for Dravidians Path 2: 1 TC into 2-Range Crossbowmen, 2-Barracks Longswords/Pikemen, and 3 Armored Elephants">RTS Overlay JSON</a>
+                            </span>
+                        </li>
+                        <li class="variant-item">
+                            <span>Path 3: 3-TC Boom First -&gt; 2-Range Elephant Archers + Light Cavalry + Rams</span>
+                            <span class="variant-links">
+                                <a class="resource-link" href="dravidian_maa_into_archers/dravidians_maa_ele_archer_3tc_boom.json" aria-label="RTS Overlay JSON for Dravidians Path 3: 3-TC Boom First into 2-Range Elephant Archers, Light Cavalry, and Rams">RTS Overlay JSON</a>
+                            </span>
+                        </li>
+                    </ul>
+                </li>
+                <li class="build-item">
+                    <div class="build-header">
+                        <a class="build-title-link" href="italians_arena_fc_genoese/italians_arena_fc_genoese.html">Italians Arena Fast Castle</a>
+                        <span class="build-meta">2 Strategies (6 Chickens Milled, Checked with 8)</span>
+                    </div>
+                    <ul class="variant-sublist">
+                        <li class="variant-item">
+                            <span>Strategy 1: 1 TC Heavy Army Push (Genoese + Light Cavalry + Monks + Rams -&gt; Imperial TCs)</span>
+                            <span class="variant-links">
+                                <a class="resource-link" href="italians_arena_fc_genoese/italians_arena_fc_genoese_1tc_push.json" aria-label="RTS Overlay JSON for Italians Strategy 1: 1 TC Heavy Army Push">RTS Overlay JSON</a>
+                            </span>
+                        </li>
+                        <li class="variant-item">
+                            <span>Strategy 2: Balanced 3-TC Boom (~20 Army -&gt; 3 TCs -&gt; Max Upgraded Army)</span>
+                            <span class="variant-links">
+                                <a class="resource-link" href="italians_arena_fc_genoese/italians_arena_fc_genoese_3tc_balanced.json" aria-label="RTS Overlay JSON for Italians Strategy 2: Balanced 3-TC Boom">RTS Overlay JSON</a>
+                            </span>
+                        </li>
+                    </ul>
+                </li>
+            </ol>
+        </section>
+    </main>
+    <script>
+        const metaScheme = document.querySelector('meta[name="color-scheme"]');
+        const themeBtn = document.getElementById('theme-toggle-btn');
+        if (themeBtn && metaScheme) {
+            themeBtn.addEventListener('click', () => {
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const current = metaScheme.content === 'dark' || (metaScheme.content === 'light dark' && prefersDark) ? 'dark' : 'light';
+                const next = current === 'dark' ? 'light' : 'dark';
+                metaScheme.content = next;
+                try {
+                    localStorage.setItem('color-scheme', next);
+                } catch (e) {}
+            });
+            window.addEventListener('storage', (ev) => {
+                if (ev.key === 'color-scheme') {
+                    metaScheme.content = ev.newValue || 'light dark';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

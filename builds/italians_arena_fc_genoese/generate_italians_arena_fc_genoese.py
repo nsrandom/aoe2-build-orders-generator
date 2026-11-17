@@ -387,7 +387,7 @@ def run_italians_arena_strategy(
                                     "3–6 (4–7)",
                                     f"00:00 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #1–#6 (6 vils) -> Build 2 Houses (-50W), then all 6 on Sheep under TC.",
+                                    "Build 2 Houses (-50W)\nAssign Vils #1–#6 -> Sheep under TC",
                                     "Start 200F, 200W, 100G, 200S; +2 Sheep at 1:30 & 2:30 (rule 1.3).",
                                 )
                         elif vid == 7:
@@ -402,8 +402,8 @@ def run_italians_arena_strategy(
                                     "7–9 (8–10)",
                                     f"01:40 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #7–#9 (3 vils) -> Wood (1st vil walks 15s + builds Lumber Camp #1 [-100W, 35s], then all 3 on Wood).",
-                                    "LC #1 completes at 02:30; wood decay -1% per 20s down to 60% floor (rule 3.4).",
+                                    "Vil #7 -> Build Lumber Camp #1 (-100W, 35s)\nAssign Vils #7–#9 -> Wood at LC #1",
+                                    "15s walk to woodline; LC #1 completes at 02:30; wood decay -1% per 20s down to 60% floor (rule 3.4).",
                                 )
                         elif vid == 10:
                             lure_start = d_t(t)
@@ -413,12 +413,12 @@ def run_italians_arena_strategy(
                                 "10 (11)",
                                 sim.fmt_time(),
                                 "Dark Age",
-                                "Vil #10 -> Lure Boar #1 (15s out + 15s back).",
-                                f"Boar #1 arrives {sim.fmt_time(boar1_arrive_t)} -> garrison 7 TC vils 5s (rule 3.7).",
+                                "Assign Vil #10 -> Lure Boar #1 -> Boar under TC",
+                                f"15s out + 15s back; Boar #1 arrives {sim.fmt_time(boar1_arrive_t)} -> garrison 7 TC vils 5s (rule 3.7).",
                             )
                         elif vid == 11:
                             sim.vils.append({"id": vid, "role": "wood", "camp_idx": 0, "busy_until": t + int(rules.camp_or_berry_walk_time_one_way)})
-                            add_row("11 (12)", sim.fmt_time(), "Dark Age", "Vil #11 -> Wood at LC #1 (15s walk; 4 on Wood).", "")
+                            add_row("11 (12)", sim.fmt_time(), "Dark Age", "Assign Vil #11 -> Wood at LC #1", "15s walk; 4 on Wood.")
                         elif vid == 12:
                             sim.spend(ResourceBundle(wood=100), "ChickenMill")
                             cmill_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
@@ -436,7 +436,7 @@ def run_italians_arena_strategy(
                                     "12–15 (13–16)",
                                     f"03:45 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #12–#15 (4 vils) -> 6 Chickens on Mill #1 (Vil #12 walks 15s + builds Mill [-100W, 35s]; Vil #13 builds House #3 [-25W] -> joins Chickens).",
+                                    "Vil #12 -> Build Mill #1 (-100W, 35s) on Chickens\nVil #13 -> Build House #3 (-25W)\nAssign Vils #12–#15 -> 6 Chickens at Mill #1",
                                     "Mill #1 on Chickens (23.9/min) unlocks Horse Collar & Farms (rule 3.9, 3.10); 2nd Boar lured before 1st finishes.",
                                 )
                         elif vid == 16:
@@ -457,7 +457,7 @@ def run_italians_arena_strategy(
                                 "16–19 (17–20)",
                                 f"05:25 – {sim.fmt_time()}",
                                 "Dark Age",
-                                "Vils #16–#19 (4 vils) -> Berries at Mill #2 (1st builds Berry Mill [-100W, 50s], 3rd builds House #4 [-25W], all 4 on Berries).",
+                                "Vil #16 -> Build Mill #2 (-100W, 35s) on Berries\nVil #18 -> Build House #4 (-25W)\nAssign Vils #16–#19 -> Berries at Mill #2",
                                 "Both Mills affordable in Dark Age for FC (rule 3.9); 4/4 on Berries.",
                             )
                         elif vid == 20:
@@ -475,7 +475,7 @@ def run_italians_arena_strategy(
                                 "20–23 (21–24)",
                                 f"07:05 – {sim.fmt_time()}",
                                 "Dark Age",
-                                "Vils #20–#23 (4 vils) -> Stone at Mining Camp (1st builds Stone MC [-100W, 50s], 4th builds House #5 [-25W], all 4 on Stone).",
+                                "Vil #20 -> Build Mining Camp (-100W, 35s) on Stone\nVil #23 -> Build House #5 (-25W)\nAssign Vils #20–#23 -> Stone",
                                 "4 Dark Age Stone miners fund instant Castle drop.",
                             )
                         elif vid in (24, 25):
@@ -486,8 +486,8 @@ def run_italians_arena_strategy(
                                 "24–26 (25–27)",
                                 f"08:45 – {sim.fmt_time()}",
                                 "Dark Age",
-                                "Vils #24–#26 (3 vils) -> Wood at LC #1 (15s walk; 7 on Wood).",
-                                "26 Dark Age vils complete (7/8 on LC #1).",
+                                "Assign Vils #24–#26 -> Wood at LC #1",
+                                "15s walk; 26 Dark Age vils complete (7/8 on LC #1).",
                             )
 
                         if vid < dark_vils and sim.bank.food >= 50:
@@ -507,7 +507,7 @@ def run_italians_arena_strategy(
                                 "27–28 (28–29)",
                                 f"{sim.fmt_time(t-25)} – {sim.fmt_time()}",
                                 "Feudal Age",
-                                "Vils #27–#28 (2 vils) -> Gold (1st builds Mining Camp [-100W, 50s], both on Gold); Market sells 100 Stone (+91G).",
+                                "Vil #27 -> Build Mining Camp (-100W, 35s) on Gold\nAssign Vils #27–#28 -> Gold\nSell 100 Stone at Market (+91G)",
                                 "100 starting Gold + 91G Market sale = 191G (>170G Castle Age cost; rule 7.2).",
                             )
 
@@ -618,7 +618,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Feudal Age",
-                            f"REACHED FEUDAL AGE! Queue +2 Feudal Vils -> Gold MC; 3 vils build Market (-175W, {mkt_build}s) & 1 vil builds Blacksmith (-150W, 40s).",
+                            f"Queue +2 Feudal Vils -> Gold\n3 vils build Market (-175W, {mkt_build}s)\n1 vil builds Blacksmith (-150W, 40s)",
                             "FC mode: Dark/Feudal runs at 100%, Castle+ macro at 90% (rule 8.2).",
                         )
 
@@ -633,8 +633,8 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_click_t)} – {sim.fmt_time()}",
                         "Castle Transition",
-                        "Castle Transition Macro: Double-Bit Axe (-100F, -50W), Horse Collar (-75F, -75W), Farms #3–#5, Gold Mining (-100F, -75W), LC #2 (-100W, 15s walk), Barracks (-175W) -> chain Stable #1 (-175W, 0s walk), and Fletching (-100F, -50G).",
-                        "DBA deferred until Castle click per tight FC exception (rule 6.3); sequential Barracks -> Stable #1 saves 20s walk.",
+                        "Research Double-Bit Axe (-100F, -50W) & Horse Collar (-75F, -75W)\nSeed Farms #3–#5 (-60W each)\nResearch Gold Mining (-100F, -75W)\n1 vil builds Lumber Camp #2 (-100W)\n1 vil builds Barracks (-175W) -> Stable #1 (-175W)\nResearch Fletching (-100F, -50G)",
+                        "Castle Transition (160s); DBA deferred until Castle click per tight FC exception (rule 6.3); sequential Barracks -> Stable #1 saves 20s walk.",
                     )
 
                     if sim.bank.food >= 50:
@@ -642,10 +642,10 @@ def run_italians_arena_strategy(
                         sim.tc_busy_until[0] = t + 25
                         sim.tc_action[0] = f"vil_{len(sim.vils)+1}"
 
-                    bow_saw_note = ""
+                    bow_saw_line = ""
                     if sim.bank.food >= 200 and queue_upg("bow saw"):
                         bow_saw_started = True
-                        bow_saw_note = " & research Bow Saw (-150F, -100W, 50s)"
+                        bow_saw_line = "\nResearch Bow Saw (-150F, -100W, 50s)"
 
                     if sim.bank.stone >= 650:
                         def_castle_started = True
@@ -660,15 +660,15 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Castle Age",
-                            f"REACHED CASTLE AGE! Drop Defensive Castle with 6 vils (-650S, 0s wait -> ready {sim.fmt_time(def_castle_ready_t)}){bow_saw_note}; keep TC #1 continuous.",
-                            "90% Castle+ macro efficiency buffer active (rule 8.2).",
+                            f"6 vils build Defensive Castle (-650S, 75s){bow_saw_line}\nQueue Vil #{len(sim.vils)+1} (keep TC #1 continuous)",
+                            f"Castle ready {sim.fmt_time(def_castle_ready_t)} (0s wait); 90% Castle+ macro efficiency buffer active (rule 8.2).",
                         )
                     else:
                         add_row(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Castle Age",
-                            f"REACHED CASTLE AGE! Queue Vil #{len(sim.vils)+1}{bow_saw_note}; drop Defensive Castle as soon as 650 Stone arrives.",
+                            f"Queue Vil #{len(sim.vils)+1}{bow_saw_line}\n6 vils build Defensive Castle (-650S) once 650 Stone arrives",
                             "90% Castle+ macro efficiency buffer active.",
                         )
 
@@ -694,16 +694,16 @@ def run_italians_arena_strategy(
                     milestones["imp_arrival_army"] = dict(sim.military_units)
 
                     trans_txt = (
-                        f"Imperial Transition (190s): Add TC #2 & TC #3 (-275W, -100S each, 3 builders) using banked Stone while scaling Genoese, Light Cav & Rams."
+                        "3 vils build TC #2 & TC #3 (-275W, -100S each)\nContinue Genoese + Light Cavalry + Battering Rams"
                         if is_1tc
-                        else f"Imperial Transition (190s): Continue 4-TC boom to {len(sim.vils)} vils, add Forward Castles / SW #2 & scale military."
+                        else f"Continue 4-TC Vils (to {len(sim.vils)} vils)\nAdd Forward Castles / Siege Workshop #2 & scale military"
                     )
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(imp_click_t)} – {sim.fmt_time()}",
                         "Imperial Transition",
                         trans_txt,
-                        f"Arrives Imperial Age at {sim.fmt_time()} (target <40:00 per rule 6.5).",
+                        f"Imperial Transition (190s); arrives Imperial Age at {sim.fmt_time()} (target <40:00 per rule 6.5).",
                     )
 
                     chem_cost, chem_time = sim.db.get_upgrade_spec("chemistry", "Italians")
@@ -723,8 +723,8 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         sim.fmt_time(),
                         "Imperial Age",
-                        f"REACHED IMPERIAL AGE! Research Conscription (-150F, -150G), Chemistry (-{chem_cost.food:.0f}F, -{chem_cost.gold:.0f}G, Italians -25%), Bracer, Elite Genoese, Hussar, Pavise, Silk Road & Siege Engineers; produce Bombard Cannons (-180W, -180G).",
-                        f"Bank on Imp arrival: {sim.bank.food:.0f}F / {sim.bank.wood:.0f}W / {sim.bank.gold:.0f}G / {sim.bank.stone:.0f}S.",
+                        f"Research Conscription (-150F, -150G)\nResearch Chemistry (-{chem_cost.food:.0f}F, -{chem_cost.gold:.0f}G)\nResearch Bracer, Elite Genoese, Hussar, Pavise, Silk Road & Siege Engineers\nTrain Bombard Cannons (-180W, -180G)",
+                        f"Italians -25% University techs; bank on Imp arrival: {sim.bank.food:.0f}F / {sim.bank.wood:.0f}W / {sim.bank.gold:.0f}G / {sim.bank.stone:.0f}S.",
                     )
 
         # Click Feudal Age (rule 5.1 <= 5s buffer)
@@ -744,8 +744,8 @@ def run_italians_arena_strategy(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(),
                     "Feudal Transition",
-                    f"CLICK FEUDAL AGE (-{feudal_cost.food:.0f}F Italians -15%, 130s, {tc_pre_click_idle_s}s TC idle)!",
-                    f"Reaches Feudal Age at {sim.fmt_time(t + int(feudal_time))}. 4 Stone miners actively gathering.",
+                    f"Click Feudal Age (-{feudal_cost.food:.0f}F, 130s)",
+                    f"Italians -15% Age Up; {tc_pre_click_idle_s}s TC idle; reaches Feudal Age at {sim.fmt_time(t + int(feudal_time))}. 4 Stone miners actively gathering.",
                 )
 
         # Feudal Transition: Sheep #8 finishes -> move overflow to LC #1 (cap 8) / Stragglers, seed up to 3 Farms (2s walk + 15s build) while reserving 325W for Market + Blacksmith
@@ -770,8 +770,8 @@ def run_italians_arena_strategy(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 sim.fmt_time(),
                 "Feudal Transition",
-                f"Sheep #8 finishes under TC: move {moved_w} TC vils to LC #1 (max 8/camp), rest on Stragglers & seed up to 2 Farms (-60W each) keeping 325W for Market + Blacksmith.",
-                "Rule 3.4: cap LC #1 at 8 vils; rule 2.7: 2s TC farm walk; Farms unlocked by Chicken Mill.",
+                f"Move {moved_w} Sheep vils -> Wood at LC #1\nMove remaining Sheep vils -> Stragglers\nSeed up to 2 Farms (-60W each)",
+                "Sheep #8 finishes; cap LC #1 at 8 vils (rule 3.4); reserve 325W for Market + Blacksmith; 2s TC farm walk (rule 2.7).",
             )
 
         if sheep_post_logged and not castle_clicked and sim.farms_seeded < 2 and sim.has_building("mill"):
@@ -829,8 +829,8 @@ def run_italians_arena_strategy(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(),
                     "Feudal Age",
-                    f"CLICK CASTLE AGE (-{castle_cost.food:.0f}F, -{castle_cost.gold:.0f}G Italians -15%, 160s) -> move {moved_g} Market/BS builders to Gold ({sim.count_role('gold')} on Gold).",
-                    f"Reaches Castle Age at {sim.fmt_time(t + int(castle_time))}.",
+                    f"Click Castle Age (-{castle_cost.food:.0f}F, -{castle_cost.gold:.0f}G, 160s)\nMove {moved_g} Market/Blacksmith builders -> Gold",
+                    f"Italians -15% Age Up; {sim.count_role('gold')} total on Gold; reaches Castle Age at {sim.fmt_time(t + int(castle_time))}.",
                 )
 
         # Castle Transition: DBA, Horse Collar, Farms #3-#5, Barracks -> Stable #1, Gold Mining, Fletching
@@ -1006,8 +1006,8 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{milestones.get('ballistics_str', sim.fmt_time())} – {sim.fmt_time()}",
                             "Castle Age",
-                            "Macro Loop 2 — 30+ Army Forward Siege Push: Send Loom vil forward (60s; rule 2.10) -> Forward Siege Workshop (-200W) + 3–4 Battering Rams (-160W, -75G each), add Stable #2 (-175W) & Heavy Plow, keep 1 TC until Imperial click.",
-                            f"Push force past 30+ army ({format_army_counts(sim.military_units).replace('Army: ', '')}).",
+                            "Send Loom vil forward (60s walk) -> Build Forward Siege Workshop (-200W)\nTrain 3–4 Battering Rams (-160W, -75G each)\n1 vil builds Stable #2 (-175W)\nResearch Heavy Plow (-125F, -125W)\nContinue Genoese + Light Cavalry (1 TC)",
+                            f"30+ Army Forward Siege Push ({format_army_counts(sim.military_units).replace('Army: ', '')}); keep 1 TC until Imperial click.",
                         )
                 if (
                     fwd_sw1_ready_t is not None
@@ -1069,8 +1069,8 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                         "Castle Age",
-                        f"Macro Loop 1 — ~20 Army Defense Setup: Build {sim.military_units['genoese']} Genoese + {sim.military_units['light_cav']} Light Cav with early upgrades; then pause military & drop TC #2 & TC #3.",
-                        "~20 army complete -> expand to 3 TCs.",
+                        f"Train {sim.military_units['genoese']} Genoese Crossbowmen + {sim.military_units['light_cav']} Light Cavalry\nResearch Light Cavalry + Blacksmith & Bloodlines upgrades\nQueue TC #1 Vils -> Farms / Gold / Wood",
+                        "~20 army defense setup complete -> expand to 3 TCs.",
                     )
 
                 if army20_reached and not tc2_started and sim.bank.wood >= (275 + house_wood_res) and sim.bank.stone >= 100:
@@ -1100,7 +1100,7 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(army20_t or t)} – {sim.fmt_time()}",
                         "Castle Age",
-                        f"Macro Loop 2 — 3-TC Expansion & Boom Setup: Pause military -> drop TC #2 & TC #3 (-275W, -100S each, 90s w/ 3 builders), prioritize 3-TC Vils, Farms (to {f_cnt_s2}+) & Wheelbarrow (-175F, -50W).",
+                        f"Pause military briefly\n3 vils build TC #2 (-275W, -100S, 90s)\n3 vils build TC #3 (-275W, -100S, 90s)\nAssign 3-TC Vils -> Farms (to {f_cnt_s2}+)\nResearch Wheelbarrow (-175F, -50W)",
                         "3-TC boom established -> resume & maximize army.",
                     )
 
@@ -1175,8 +1175,8 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{sim.fmt_time(boom3tc_setup_t or t)} – {sim.fmt_time()}",
                             "Castle Age",
-                            "Macro Loop 3 — Full Flood, Ballistics & Forward Push -> Imp Prep: Maximize Genoese + Light Cav; at 20+ Genoese prioritize University + Ballistics; send 8 Loom vils forward (60s walk) for Castle #2/#3, TC #4 & Siege Workshop; bank 850F / 680G for Imperial Age.",
-                            f"Army at Imp prep: {format_army_counts(sim.military_units).replace('Army: ', '')}.",
+                            "Train Genoese Crossbowmen + Light Cavalry continuously\n1 vil builds University (-200W) -> Research Ballistics\nSend 8 Loom vils forward (60s walk) -> Build Castles #2/#3, TC #4 & Siege Workshop\nBank 850F / 680G",
+                            f"3-TC full flood; Ballistics at 20+ Genoese; army at Imp prep: {format_army_counts(sim.military_units).replace('Army: ', '')}.",
                         )
 
                 if sim.age == 3 and boom3tc_ready and not imp_clicked and (t - last_market_trade_t) >= 60 and market_trades_castle < 4:
@@ -1271,8 +1271,12 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Castle Age",
-                            f"CLICK IMPERIAL AGE (-{imp_cost.food:.0f}F, -{imp_cost.gold:.0f}G Italians -15%, 190s)! Army: {format_army_counts(sim.military_units).replace('Army: ', '')}.",
-                            "Add TC #2 & TC #3 during Imperial Transition!" if is_1tc else "4 TCs continue booming during Imperial Transition.",
+                            f"Click Imperial Age (-{imp_cost.food:.0f}F, -{imp_cost.gold:.0f}G, 190s)",
+                            (
+                                f"Italians -15% Age Up; army: {format_army_counts(sim.military_units).replace('Army: ', '')}; add TC #2 & TC #3 during Imperial Transition."
+                                if is_1tc
+                                else f"Italians -15% Age Up; army: {format_army_counts(sim.military_units).replace('Army: ', '')}; 4 TCs continue booming during Imperial Transition."
+                            ),
                         )
                     elif tc_idx == 0 and not wheelbarrow_started and f_cnt_now >= 15 and (is_1tc or army20_reached) and sim.bank.food >= 175 and sim.bank.wood >= (50 + house_wood_res):
                         wheelbarrow_started = True
@@ -1470,8 +1474,8 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                             "Castle Age",
-                            f"Macro Loop 1 — Genoese + Light Cav + Monastery -> Ballistics: Build Monastery (-175W) + 2 Monks (1 Relic = +30G/min); mass Genoese & Light Cav; at 20+ Genoese prioritize University (-200W) -> Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G, Italians -25%).",
-                            "Ballistics prioritized ahead of extra Stables/SW per rule 6.4.",
+                            f"1 vil builds Monastery (-175W); train 2 Monks (-100G each)\nTrain Genoese Crossbowmen + Light Cavalry continuously\n1 vil builds University (-200W) -> Research Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G)",
+                            "Monk #1 secures Relic (+30G/min); Italians -25% University techs; Ballistics prioritized at 20+ Genoese ahead of extra Stables/SW per rule 6.4.",
                         )
 
             # Castle Age combat & eco upgrades (with real research times!)
@@ -1621,8 +1625,8 @@ def run_italians_arena_strategy(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
                 "Imperial Age",
-                f"Full Imperial Composition Online ({len(sim.vils)} Vils + {sum(sim.military_units.values())} Military = {sim.total_pop()} Pop): {format_army_counts(sim.military_units).replace('Army: ', '')}.",
-                f"Full upgrades complete (Elite Genoese, Hussar, Bracer, Ballistics, Chemistry, Pavise, Silk Road, Siege Engineers). Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
+                "Train Genoese Crossbowmen + Light Cavalry / Hussars + Trebuchets + Bombard Cannons\nContinue final Imperial upgrades",
+                f"Full Imperial composition online ({len(sim.vils)} Vils + {sum(sim.military_units.values())} Military = {sim.total_pop()} Pop): {format_army_counts(sim.military_units).replace('Army: ', '')}. Full upgrades complete (Elite Genoese, Hussar, Bracer, Ballistics, Chemistry, Pavise, Silk Road, Siege Engineers). Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
             )
             break
 

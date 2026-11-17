@@ -338,7 +338,7 @@ def run_dravidians_path(
                                     "3–6 (4–7)",
                                     f"00:00 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #1–#6 (6 vils) -> Build 2 Houses (-50W), then all 6 on Sheep under TC.",
+                                    "Build 2 Houses (-50W)\nAssign Vils #1–#6 -> Sheep under TC",
                                     "Start 200F, 200W, 100G, 200S; +2 Sheep at 1:30 & 2:30 (rule 1.3).",
                                 )
                         elif vid == 7:
@@ -353,8 +353,8 @@ def run_dravidians_path(
                                     "7–9 (8–10)",
                                     f"01:40 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #7–#9 (3 vils) -> Wood (1st vil walks 15s + builds Lumber Camp #1 [-100W, 35s], then all 3 on Wood).",
-                                    "LC #1 completes at 02:30; wood decay -1% per 20s down to 60% floor (rule 3.4).",
+                                    "Vil #7 -> Build Lumber Camp #1 (-100W, 35s)\nAssign Vils #7–#9 -> Wood at LC #1",
+                                    "15s walk to woodline; LC #1 completes at 02:30; wood decay -1% per 20s down to 60% floor (rule 3.4).",
                                 )
                         elif vid == 10:
                             lure_start = d_t(t)
@@ -364,12 +364,12 @@ def run_dravidians_path(
                                 "10 (11)",
                                 sim.fmt_time(),
                                 "Dark Age",
-                                "Vil #10 -> Lure Boar #1 (15s out + 15s back).",
-                                f"Boar #1 arrives {sim.fmt_time(boar1_arrive_t)} -> garrison 7 TC vils 5s (rule 3.7).",
+                                "Assign Vil #10 -> Lure Boar #1 -> Boar under TC",
+                                f"15s out + 15s back; Boar #1 arrives {sim.fmt_time(boar1_arrive_t)} -> garrison 7 TC vils 5s (rule 3.7).",
                             )
                         elif vid == 11:
                             sim.vils.append({"id": vid, "role": "wood", "camp_idx": 0, "busy_until": t + int(rules.camp_or_berry_walk_time_one_way)})
-                            add_row("11 (12)", sim.fmt_time(), "Dark Age", "Vil #11 -> Wood at LC #1 (15s walk; 4 on Wood).", "")
+                            add_row("11 (12)", sim.fmt_time(), "Dark Age", "Assign Vil #11 -> Wood at LC #1", "15s walk; 4 on Wood.")
                         elif vid == 12:
                             sim.spend(ResourceBundle(wood=100), "ChickenMill")
                             mill_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
@@ -387,8 +387,8 @@ def run_dravidians_path(
                                     "12–15 (13–16)",
                                     f"03:45 – {sim.fmt_time()}",
                                     "Dark Age",
-                                    "Vils #12–#15 (4 vils) -> 6 Chickens on Mill (Vil #12 walks 15s + builds Mill [-100W, 35s]; Vil #13 builds House #3 [-25W] -> joins Chickens; unlocks Farms & Horse Collar).",
-                                    "Milling Chickens first (23.9/min vs 17.3/min Berries; rule 3.9); LC #1 + Mill satisfies Feudal Age building req (rule 4.6); 2nd Boar lured before 1st finishes.",
+                                    "Vil #12 -> Build Mill (-100W, 35s) on Chickens\nVil #13 -> Build House #3 (-25W)\nAssign Vils #12–#15 -> 6 Chickens at Mill",
+                                    "Milling Chickens first (23.9/min vs 17.3/min Berries; rule 3.9) unlocks Farms & Horse Collar; LC #1 + Mill satisfies Feudal Age building req (rule 4.6); 2nd Boar lured before 1st finishes.",
                                 )
                         elif vid == 16:
                             sim.vils.append({"id": vid, "role": "boar", "busy_until": t})
@@ -403,7 +403,7 @@ def run_dravidians_path(
                                 "16–18 (17–19)",
                                 f"05:25 – {sim.fmt_time()}",
                                 "Dark Age",
-                                "Vils #16–#18 (3 vils) -> Boar under TC (Vil #17 builds House #4 [-25W] -> joins Boar).",
+                                "Vil #17 -> Build House #4 (-25W)\nAssign Vils #16–#18 -> Boar under TC",
                                 "LC #1 + Chicken Mill already satisfies 2 Dark Age buildings (rule 4.6), saving Barracks wood for Feudal click.",
                             )
                         elif vid == 19:
@@ -412,8 +412,8 @@ def run_dravidians_path(
                                 "19 (20)",
                                 sim.fmt_time(),
                                 "Dark Age",
-                                "Vil #19 -> Long-Distance Gold (15s walk), then queue Loom (-50G, 25s) -> Click Feudal Age (20 Pop / 19v).",
-                                "Funds 3 Militia (60G) + Loom (50G) + MAA (20G).",
+                                "Assign Vil #19 -> Long-Distance Gold\nResearch Loom (-50G, 25s)\nClick Feudal Age (-500F, 130s)",
+                                "15s walk to Gold; 20 Pop / 19v; funds 3 Militia (60G) + Loom (50G) + MAA (20G).",
                             )
 
                         if vid < 19 and sim.bank.food >= 50:
@@ -500,8 +500,8 @@ def run_dravidians_path(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         sim.fmt_time(),
                         "Feudal Age",
-                        "REACHED FEUDAL AGE (+200W Dravidians bonus!): Queue Vil, research MAA (-50F, -20G, 40s) & Double-Bit Axe (-100F, -50W, 25s), build Archery Range #1 (-175W).",
-                        "3 Militia upgrade to 3 MAA. 92% Feudal macro efficiency active (rule 8.2).",
+                        "Queue Vil -> Gold\nResearch Man-at-Arms (-50F, -20G, 40s)\nResearch Double-Bit Axe (-100F, -50W, 25s)\n1 vil builds Archery Range #1 (-175W)",
+                        "+200W Dravidians bonus; 3 Militia upgrade to 3 MAA; 92% Feudal macro efficiency active (rule 8.2).",
                     )
 
                 elif act == "wheelbarrow":
@@ -525,8 +525,8 @@ def run_dravidians_path(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_click_t)} – {sim.fmt_time()}",
                         "Castle Transition",
-                        "CASTLE TRANSITION (160s): Build Archery Range #2 (-175W) & Padded Archer Armor (-100F, 40s); produce Archers continuously from 2 Ranges.",
-                        f"Arrives Castle Age with {sim.military_units['archer']} Archers + 3 MAA.",
+                        "1 vil builds Archery Range #2 (-175W)\nResearch Padded Archer Armor (-100F, 40s)\nTrain Archers continuously from 2 Ranges",
+                        f"Castle Transition (160s); arrives Castle Age with {sim.military_units['archer']} Archers + 3 MAA.",
                     )
 
                 elif act == "imperial":
@@ -541,8 +541,8 @@ def run_dravidians_path(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(imp_click_t or t)} – {sim.fmt_time()}",
                         "Imperial Transition",
-                        "IMPERIAL TRANSITION (190s): Resume production buildings, finish Ballistics/Thumb Ring/Hand Cart & extra TCs (<500–1000 float).",
-                        f"Arrives Imperial Age at {sim.fmt_time()} (<40:00 per rule 6.5).",
+                        "Continue military production & buildings\nResearch Ballistics / Thumb Ring / Hand Cart\nAdd extra TCs (as affordable)",
+                        f"Imperial Transition (190s); arrives Imperial Age at {sim.fmt_time()} (<40:00 per rule 6.5; <500–1000 float).",
                     )
 
         # Click Feudal Age as soon as Loom completes
@@ -582,8 +582,8 @@ def run_dravidians_path(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(),
                     "Feudal Transition",
-                    f"CLICK FEUDAL AGE (-500F, 130s, {tc_pre_click_idle_s}s idle): Move 3 food vils to Wood (1st builds Barracks [-175W, 50s] -> chains House #5 [-25W, 0s walk] -> LC #1 = 7 on Wood).",
-                    "20 Pop / 19v Feudal click (rule 4.6); Barracks completes ~60s into transition for 3 Militia.",
+                    "Click Feudal Age (-500F, 130s)\nMove 3 Food vils -> Wood\n1st vil builds Barracks (-175W, 50s) -> House #5 (-25W) -> Wood at LC #1",
+                    f"20 Pop / 19v Feudal click ({tc_pre_click_idle_s}s idle; rule 4.6); 7 on Wood; Barracks completes ~60s into transition for 3 Militia.",
                 )
 
         # Build Mining Camp on Gold (~35s after clicking Feudal)
@@ -604,8 +604,8 @@ def run_dravidians_path(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 sim.fmt_time(),
                 "Feudal Transition",
-                "Build Mining Camp on Gold (-100W, 35s) & send 2nd vil to Gold (2 on Gold).",
-                "Funds 3 Militia + MAA upgrade + smooth 1-Range Archer gold.",
+                "1 vil builds Mining Camp (-100W, 35s) on Gold\nSend 2nd vil -> Gold",
+                "2 on Gold; funds 3 Militia + MAA upgrade + smooth 1-Range Archer gold.",
             )
 
         # Train 3 Militia during Feudal Transition
@@ -621,8 +621,8 @@ def run_dravidians_path(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 f"{sim.fmt_time((barracks_ready[0] or t))} – {sim.fmt_time()}",
                 "Feudal Transition",
-                "Train 3 Militia at Barracks (-150F, -60G total; 21s each) & march forward.",
-                "All 3 Militia ready for instant MAA upgrade on Feudal arrival.",
+                "Train 3 Militia at Barracks (-150F, -60G total)\nMarch 3 Militia forward",
+                "21s each; all 3 Militia ready for instant MAA upgrade on Feudal arrival.",
             )
 
         # Rule 4.4 Houses (Feudal+): maintain 2-3 + producing_mil + extra_tcs room at completion; houses before units
@@ -671,7 +671,7 @@ def run_dravidians_path(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(feudal_loop1_start_t or feudal_click_t)} – {sim.fmt_time()}",
                         "Feudal Age",
-                        "Macro Loop 2 — Scale Eco to Castle Age: Continuous Vils -> Stragglers & Farms (up to 17), Gold to 7 + Gold Mining (-100F, -75W), 1-Range Archers & Houses, Wheelbarrow (-175F, -50W) -> Click Castle Age (800F, 200G).",
+                        "Assign Vils -> Stragglers & Farms (up to 17), Gold to 7\nResearch Gold Mining (-100F, -75W)\nTrain Archers at Range #1 & build Houses (-25W)\nResearch Wheelbarrow (-175F, -50W)\nClick Castle Age (-800F, -200G, 160s)",
                         f"Clicked Castle Age at {sim.fmt_time()} with {len(sim.vils)} vils & {sim.military_units['archer']} Archers.",
                     )
             elif not wb_started and len(sim.vils) >= 34 and sim.bank.food >= 175 and sim.bank.wood >= (50 + house_wood_res):
@@ -711,7 +711,7 @@ def run_dravidians_path(
                 f"20–{len(sim.vils)} ({sim.total_pop()})",
                 f"{sim.fmt_time(feudal_click_t + 130)} – {sim.fmt_time()}",
                 "Feudal Age",
-                "Macro Loop 1 — Setup Archers & Blacksmith: Continuous Vils -> Gold to 4, Wood to 8; Horse Collar (-75F, -75W), Blacksmith (-150W) -> Fletching (-100F, -50G); 1-Range Archers; finishing food vils -> Stragglers & Farms every 60W.",
+                "Assign continuous Vils -> Gold to 4, then Wood to 8\nResearch Horse Collar (-75F, -75W)\n1 vil builds Blacksmith (-150W) -> Research Fletching (-100F, -50G)\nTrain Archers at Range #1\nFinishing food vils -> Stragglers & Farms (-60W each)",
                 "Never idle TC or Range #1; spare Wood goes to Farms.",
             )
 
@@ -793,16 +793,16 @@ def run_dravidians_path(
                 milestones["castle_spike_logged"] = True
                 milestones["xbow_bodkin_bowsaw_str"] = sim.fmt_time()
                 spike_txt = (
-                    "REACHED CASTLE AGE (+200W): Research Crossbowman (-175F, -100G, 35s), Bodkin Arrow (-200F, -100G, 35s), Bow Saw (-150F, -100W, 50s); pause Range briefly & drop TC #2 & TC #3 (-275W, -100S each)."
+                    "Research Crossbowman (-175F, -100G, 35s)\nResearch Bodkin Arrow (-200F, -100G, 35s)\nResearch Bow Saw (-150F, -100W, 50s)\nPause Range #1–#2 briefly & drop TC #2 & TC #3 (-275W, -100S each)"
                     if path_key == "3tc_boom_ele_archer"
-                    else "REACHED CASTLE AGE (+200W): Research Crossbowman (-175F, -100G, 35s), Bodkin Arrow (-200F, -100G, 35s), Bow Saw (-150F, -100W, 50s); keep 1 TC & 2-Range Xbows continuous."
+                    else "Research Crossbowman (-175F, -100G, 35s)\nResearch Bodkin Arrow (-200F, -100G, 35s)\nResearch Bow Saw (-150F, -100W, 50s)\nQueue Vils (1 TC) & 2-Range Crossbowmen continuously"
                 )
                 add_row(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(),
                     "Castle Age",
                     spike_txt,
-                    "90% Castle macro efficiency buffer active (rule 8.2).",
+                    "+200W Dravidians bonus; 90% Castle macro efficiency buffer active (rule 8.2).",
                 )
 
             imp_prereq_ready = sw_ready[0] is not None and t >= sw_ready[0] and univ_ready_t is not None and t >= univ_ready_t
@@ -899,8 +899,8 @@ def run_dravidians_path(
                                 f"{len(sim.vils)} ({sim.total_pop()})",
                                 f"{sim.fmt_time(castle_arrived_t)} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "Macro Loop 1 — 1-TC Fast Army Ramp: Build Stable (-175W) + Heavy Plow; at 20+ Xbows prioritize University (-200W) -> Ballistics (-300W, -175G) + Siege Workshop (-200W), then scale Ranges (#3–#4) & Stable (#2) to hit 50+ army.",
-                                "Prioritizes Ballistics at 20+ Xbows (rule 6.4).",
+                                "1 vil builds Stable (-175W); train Light Cavalry\nResearch Heavy Plow (-125F, -125W)\n1 vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 vil builds Siege Workshop (-200W)\nAdd Archery Ranges #3–#4 (-175W each) & Stable #2 (-175W)",
+                                "1-TC Fast Army Ramp; prioritizes Ballistics at 20+ Xbows (rule 6.4).",
                             )
                     if sw_started and univ_started and not saving_for_imp and not ballistics_res_now:
                         if count_built(range_ready) < (5 if imp_clicked else 4) and sim.bank.wood >= (275 + house_wood_res):
@@ -921,7 +921,7 @@ def run_dravidians_path(
                                 f"{len(sim.vils)} ({sim.total_pop()})",
                                 sim.fmt_time(),
                                 current_phase,
-                                "Late TCs Expansion: Add TC #2 & TC #3 (-275W, -100S each, 90s w/ 3 builders) -> scale Farms (30+) & Gold (15+) into Imperial.",
+                                "3 vils build TC #2 (-275W, -100S)\n3 vils build TC #3 (-275W, -100S)\nAssign 3-TC Vils -> Farms (30+) & Gold (15+)",
                                 "Dravidians starting 200 Stone funds both extra TCs with zero Stone mining.",
                             )
 
@@ -945,7 +945,7 @@ def run_dravidians_path(
                                 f"{len(sim.vils)} ({sim.total_pop()})",
                                 f"{sim.fmt_time(castle_arrived_t)} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "Macro Loop 1 — 1-TC 2-Rax Infantry + Xbows Ramp: Build Barracks #2 (-175W) + Heavy Plow; at 20+ Xbows prioritize University -> Ballistics + Siege Workshop; get -50% Long Swordsman, Pikeman, Squires, Scale Mail, Forging & Leather Armor.",
+                                "1 vil builds Barracks #2 (-175W)\nResearch Heavy Plow (-125F, -125W)\n1 vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 vil builds Siege Workshop (-200W)\nResearch Long Swordsman, Pikeman, Squires, Scale Mail, Forging & Leather Armor\nTrain Crossbowmen + Longswordsmen + Pikemen",
                                 "Prioritizes Ballistics at 20+ Xbows (rule 6.4); -50% Barracks techs.",
                             )
                     if sw_started and univ_started and not saving_for_imp and not ballistics_res_now:
@@ -967,7 +967,7 @@ def run_dravidians_path(
                                 f"{len(sim.vils)} ({sim.total_pop()})",
                                 sim.fmt_time(),
                                 current_phase,
-                                "Late TCs Expansion: Add TC #2 & TC #3 (-275W, -100S each) -> scale Farms (32+) & Gold (15+) into Imperial.",
+                                "3 vils build TC #2 (-275W, -100S)\n3 vils build TC #3 (-275W, -100S)\nAssign 3-TC Vils -> Farms (32+) & Gold (15+)",
                                 "Dravidians starting 200 Stone funds both extra TCs.",
                             )
 
@@ -989,8 +989,8 @@ def run_dravidians_path(
                                 f"{len(sim.vils)} ({sim.total_pop()})",
                                 f"{sim.fmt_time(castle_arrived_t)} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "Macro Loop 1 — 3-TC Eco Boom: Continuous Vils across 3 TCs -> Farms to 28+ (Heavy Plow), Gold to 16–20, Wood to 14; research Hand Cart (-300F, -200W) at ~48 vils.",
-                                "Defend with Xbows + MAA while 3 TCs rapidly scale.",
+                                "Queue 3-TC Vils -> Farms (28+), Gold (16–20), Wood (14)\nResearch Heavy Plow (-125F, -125W)\nResearch Hand Cart (-300F, -200W) at ~48 vils",
+                                "3-TC eco boom; defend with Xbows + MAA while 3 TCs rapidly scale.",
                             )
                     if ele_switch_started:
                         if not stable_started and sim.bank.wood >= (175 + house_wood_res):
@@ -1011,8 +1011,8 @@ def run_dravidians_path(
                                     f"{len(sim.vils)} ({sim.total_pop()})",
                                     f"{milestones['ele_switch_str']} – {sim.fmt_time()}",
                                     "Castle Age",
-                                    "Macro Loop 2 — Multi-Range Elephant Archers + Light Cav Switch: Elephant Archers, add Stable (-175W) + University (-200W) -> Ballistics (-300W, -175G) at 20+ ranged, Siege Workshop (-200W), scale Ranges & Thumb Ring until 50+ army.",
-                                    "Ballistics triggers at 20+ ranged per rule 6.4.",
+                                    "Train Elephant Archers from Ranges\n1 vil builds Stable (-175W); train Light Cavalry\n1 vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 vil builds Siege Workshop (-200W)\nAdd Archery Ranges & research Thumb Ring (-300F, -250W)",
+                                    "Multi-Range Elephant Archers + Light Cav switch; Ballistics triggers at 20+ ranged per rule 6.4.",
                                 )
                         if sw_started and univ_started and not saving_for_imp and not ballistics_res_now and len(sim.vils) >= 58:
                             if count_built(range_ready) < (5 if imp_clicked else 4) and sim.bank.wood >= (275 + house_wood_res) and sim.bank.food >= 200:
@@ -1032,8 +1032,8 @@ def run_dravidians_path(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         sim.fmt_time(),
                         "Castle Age",
-                        "50+ Army Hit -> Shift Priority to Imperial Age: Pause extra military queues as needed to bank 1000F + 800G; ensure Siege Workshop & University are up, then click Imperial Age (<40:00 goal; rule 6.5).",
-                        f"Army at shift: {format_army_counts(current_army_dict())}.",
+                        "Pause extra military queues to bank 1000F + 800G\nBuild Siege Workshop & University if missing\nClick Imperial Age (-1000F, -800G, 190s)",
+                        f"50+ Army hit (<40:00 goal; rule 6.5); army at shift: {format_army_counts(current_army_dict())}.",
                     )
 
                 if imp_clicked or sim.age == 4:
@@ -1053,8 +1053,8 @@ def run_dravidians_path(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Imperial Age",
-                            "REACHED IMPERIAL AGE (+200W Dravidians bonus!): Research Imperial unit/Blacksmith spikes and keep spending resources (<500–1000 float) on production + Armored/Siege Elephants.",
-                            f"Imperial reached well before 40:00 at {sim.fmt_time()} with {len(sim.vils)} vils.",
+                            "Research Imperial unit & Blacksmith upgrades\nProduce main army + Armored/Siege Elephants",
+                            f"+200W Dravidians bonus; Imperial reached before 40:00 at {sim.fmt_time()} with {len(sim.vils)} vils (<500–1000 float).",
                         )
                     if path_key in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram") and queue_upg("arbalester"):
                         milestones["imp_main_unit_upg_str"] = sim.fmt_time(t + 50)
@@ -1153,8 +1153,8 @@ def run_dravidians_path(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             current_phase,
-                            "Siege Push Ready — Build Siege Workshop (-200W) & 3 Armored Elephants (120F, 95G each): Push with upgraded army!",
-                            f"Push force: {format_army_counts(current_army_dict())}.",
+                            "1 vil builds Siege Workshop (-200W)\nTrain 3 Armored Elephants (-120F, -95G each)",
+                            f"Push with upgraded army; push force: {format_army_counts(current_army_dict())}.",
                         )
 
         # Farm seeding (let expired farms reseed before adding new farms)

@@ -859,15 +859,15 @@ def _build_resource_chart_html(doc: BuildOrderDocument, tab_idx: int, icon_dir_r
         label = ""
         if "CLICK FEUDAL" in act_up:
             label = "Feudal Click"
-        elif "REACHED FEUDAL" in act_up:
-            label = "Feudal Age"
         elif "CLICK CASTLE" in act_up:
             label = "Castle Click"
-        elif "REACHED CASTLE" in act_up:
-            label = "Castle Age"
         elif "CLICK IMPERIAL" in act_up:
             label = "Imp Click"
-        elif "REACHED IMPERIAL" in act_up:
+        elif "REACHED FEUDAL" in act_up or r.age == "Feudal Age":
+            label = "Feudal Age"
+        elif "REACHED CASTLE" in act_up or r.age == "Castle Age":
+            label = "Castle Age"
+        elif "REACHED IMPERIAL" in act_up or r.age == "Imperial Age":
             label = "Imp Age"
         if label and label not in seen_ms:
             seen_ms.add(label)
@@ -1092,14 +1092,22 @@ def export_build_order_html(
                     if army_str
                     else ""
                 )
-                action_html = _replace_res_abbr_with_icons(html.escape(r.action), icon_dir_rel)
+                action_lines = [
+                    ln.strip()
+                    for ln in re.split(r"\s*(?:<br\s*/?>|\n)\s*", r.action.strip())
+                    if ln.strip()
+                ]
+                action_html = "<br>".join(
+                    _replace_res_abbr_with_icons(html.escape(ln), icon_dir_rel)
+                    for ln in action_lines
+                )
                 notes_body_html = _replace_res_abbr_with_icons(html.escape(r.notes), icon_dir_rel)
                 notes_html = f"{army_badge_html}{notes_body_html}"
                 bank_cell_html = (
                     f'<span class="bank-item"><span class="res-f">{r.bank_food:.0f}</span>{icon_f}</span>'
                     f'<span class="bank-sep">/</span>'
                     f'<span class="bank-item"><span class="res-w">{r.bank_wood:.0f}</span>{icon_w}</span>'
-                    f'<span class="bank-sep">/</span>'
+                    f'<br>'
                     f'<span class="bank-item"><span class="res-g">{r.bank_gold:.0f}</span>{icon_g}</span>'
                     f'<span class="bank-sep">/</span>'
                     f'<span class="bank-item"><span class="res-s">{r.bank_stone:.0f}</span>{icon_s}</span>'
@@ -1127,7 +1135,7 @@ def export_build_order_html(
                     <tr>
                         <td class="mono center">{html.escape(r.pop)}</td>
                         <td class="mono center">{html.escape(r.timestamp)}</td>
-                        <td>{action_html}</td>
+                        <td class="action-cell">{action_html}</td>
                         {''.join(food_cells)}
                         {''.join(other_res_cells)}
                         <td class="mono center bank-cell">{bank_cell_html}</td>
@@ -1180,17 +1188,17 @@ def export_build_order_html(
                         <span class="phase-row-count">{row_cnt} {"row" if row_cnt == 1 else "rows"}</span>
                     </summary>
                     <div class="phase-body">
-                        <div class="table-wrap">
+                        <div class="table-wrap" tabindex="0" role="region" aria-label="{html.escape(phase_name)} timeline table">
                             <table>
                                 <thead>
                                     <tr>
                                         <th{rowspan_attr} class="center">Vils/Pop</th>
                                         <th{rowspan_attr} class="center">Time</th>
-                                        <th{rowspan_attr}>Villager Assignment / Action</th>
+                                        <th{rowspan_attr} class="col-action">Villager Assignment / Action</th>
                                         {food_hdr_top}
                                         {''.join(other_res_hdrs)}
-                                        <th{rowspan_attr} class="center">Resource Bank</th>
-                                        <th{rowspan_attr}>Notes, Buildings &amp; Army</th>
+                                        <th{rowspan_attr} class="center col-bank">Resource Bank</th>
+                                        <th{rowspan_attr} class="col-notes">Notes, Buildings &amp; Army</th>
                                     </tr>
                                     {sub_hdr_row}
                                 </thead>
