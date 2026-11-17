@@ -82,7 +82,7 @@
                 "stone": 0
             },
             "notes": [
-                "Feudal Transition: 3 food vils -> @resource/Aoe2de_wood.png@ (1st builds @barracks/Barracks_aoe2DE.png@ -> chains House #5); @resource/Aoe2de_hammer.png@ @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_gold.png@; train 3 Militia."
+                "Feudal Transition: Move 3 Sheep vils (from Food under TC) -> @resource/Aoe2de_wood.png@ (1st builds @barracks/Barracks_aoe2DE.png@ -> chains House #5); LD Gold vil #19 @resource/Aoe2de_hammer.png@ @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_gold.png@ & move 1 Sheep vil -> @resource/Aoe2de_gold.png@; train 3 Militia."
             ]
         },
         {

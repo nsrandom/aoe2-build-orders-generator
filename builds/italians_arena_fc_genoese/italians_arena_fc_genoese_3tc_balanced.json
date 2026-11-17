@@ -93,7 +93,7 @@
                 "stone": 4
             },
             "notes": [
-                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F); Sheep #8 finishes -> seed up to 2 @mill/FarmDE.png@s + cap LC #1 at 8."
+                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F); Sheep #8 finishes -> move 1 Sheep vil to @resource/Aoe2de_wood.png@ (8 at LC #1), remaining Sheep vils -> Stragglers & move up to 2 Stragglers -> @mill/FarmDE.png@s."
             ]
         },
         {
@@ -106,8 +106,8 @@
                 "stone": 4
             },
             "notes": [
-                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil @blacksmith/Blacksmith_aoe2de.png@.",
-                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G)."
+                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 Straggler/Wood vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 builds @blacksmith/Blacksmith_aoe2de.png@.",
+                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G); move 3 Wood/Straggler builders -> @resource/Aoe2de_gold.png@."
             ]
         },
         {
@@ -120,8 +120,8 @@
                 "stone": 4
             },
             "notes": [
-                "Click @age/CastleAgeIconDE_alpha.png@: @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5, @mining_camp/GoldMiningDE.png@, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 & Fletching.",
-                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): Drop Defensive @castle/Castle_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@, continuous @town_center/Towncenter_aoe2DE.png@ #1."
+                "Click @age/CastleAgeIconDE_alpha.png@: move 3 Wood/Straggler builders -> @resource/Aoe2de_gold.png@; @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5 (from Stragglers/Wood), @mining_camp/GoldMiningDE.png@, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 (from Wood) & Fletching.",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): 6 Wood vils build Defensive @castle/Castle_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@, continuous @town_center/Towncenter_aoe2DE.png@ #1."
             ]
         },
         {
@@ -134,7 +134,7 @@
                 "stone": 4
             },
             "notes": [
-                "Build ~20 Army (13 Genoese + 7 @stable/Lightcavalry_aoe2DE.png@) with early upgrades; then PAUSE military & drop @town_center/Towncenter_aoe2DE.png@ #2 & #3!",
+                "Build ~20 Army (13 Genoese + 7 @stable/Lightcavalry_aoe2DE.png@) with early upgrades; then PAUSE military & 3 Wood/Farm vils drop @town_center/Towncenter_aoe2DE.png@ #2 & #3!",
                 "Prioritize 3-TC continuous @resource/MaleVillDE.jpg@s, @mill/FarmDE.png@s (22+) & @town_center/WheelbarrowDE.png@ (31:30)."
             ]
         },
@@ -148,7 +148,7 @@
                 "stone": 6
             },
             "notes": [
-                "Maximize Genoese + @stable/Lightcavalry_aoe2DE.png@; at 20+ Genoese prioritize @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (35:55, -25%); send 8 Loom vils forward (60s) for Castle #2/#3, TC #4 & @siege_workshop/Siege_workshop_aoe2DE.png@!",
+                "Maximize Genoese + @stable/Lightcavalry_aoe2DE.png@; at 20+ Genoese 1 Wood vil builds @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (35:55, -25%); send 8 Loom Wood/Farm vils forward (60s) for Castle #2/#3, TC #4 & @siege_workshop/Siege_workshop_aoe2DE.png@!",
                 "Click @age/ImperialAgeIconDE_alpha.png@ (36:30, 850F/680G) well before 40:00."
             ]
         },

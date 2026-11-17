@@ -93,7 +93,7 @@
                 "stone": 4
             },
             "notes": [
-                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F); Sheep #8 finishes -> seed up to 2 @mill/FarmDE.png@s + cap LC #1 at 8."
+                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F); Sheep #8 finishes -> move 1 Sheep vil to @resource/Aoe2de_wood.png@ (8 at LC #1), remaining Sheep vils -> Stragglers & move up to 2 Stragglers -> @mill/FarmDE.png@s."
             ]
         },
         {
@@ -106,8 +106,8 @@
                 "stone": 4
             },
             "notes": [
-                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil @blacksmith/Blacksmith_aoe2de.png@.",
-                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G)."
+                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 Straggler/Wood vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 builds @blacksmith/Blacksmith_aoe2de.png@.",
+                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G); move 3 Wood/Straggler builders -> @resource/Aoe2de_gold.png@."
             ]
         },
         {
@@ -120,8 +120,8 @@
                 "stone": 4
             },
             "notes": [
-                "Click @age/CastleAgeIconDE_alpha.png@: @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5, @mining_camp/GoldMiningDE.png@, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 & Fletching.",
-                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): Drop Defensive @castle/Castle_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@, continuous 1 @town_center/Towncenter_aoe2DE.png@."
+                "Click @age/CastleAgeIconDE_alpha.png@: move 3 Wood/Straggler builders -> @resource/Aoe2de_gold.png@; @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5 (from Stragglers/Wood), @mining_camp/GoldMiningDE.png@, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 (from Wood) & Fletching.",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): 6 Wood vils build Defensive @castle/Castle_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@, continuous 1 @town_center/Towncenter_aoe2DE.png@."
             ]
         },
         {
@@ -134,8 +134,8 @@
                 "stone": 2
             },
             "notes": [
-                "Build @monastery/Monastery_aoe2DE.png@ (2 Monks, 1 Relic = +30G/min) + Genoese & @stable/Lightcavalry_aoe2DE.png@; drop 2 @resource/Aoe2de_stone.png@ -> @resource/Aoe2de_wood.png@.",
-                "At 20+ Genoese: prioritize @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (29:47, -25% Italians) ahead of extra buildings!"
+                "Build @monastery/Monastery_aoe2DE.png@ (from Wood/Gold; 2 Monks, 1 Relic = +30G/min) + Genoese & @stable/Lightcavalry_aoe2DE.png@; move 2 @resource/Aoe2de_stone.png@ vils -> @resource/Aoe2de_wood.png@.",
+                "At 20+ Genoese: 1 Wood vil builds @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (29:47, -25% Italians) ahead of extra buildings!"
             ]
         },
         {
@@ -148,8 +148,8 @@
                 "stone": 2
             },
             "notes": [
-                "At 30+ Army: send Loom vil forward (60s walk) -> Forward @siege_workshop/Siege_workshop_aoe2DE.png@ & 3-4 @siege_workshop/Battering_ram_aoe2DE.png@s + Stable #2; stick to 1 @town_center/Towncenter_aoe2DE.png@!",
-                "Click @age/ImperialAgeIconDE_alpha.png@ (34:26, 850F/680G); add @town_center/Towncenter_aoe2DE.png@ #2 & #3 after clicking Imp!"
+                "At 30+ Army: send 1 Wood/Farm Loom vil forward (60s walk) -> Forward @siege_workshop/Siege_workshop_aoe2DE.png@ & 3-4 @siege_workshop/Battering_ram_aoe2DE.png@s + Stable #2 (from Wood); stick to 1 @town_center/Towncenter_aoe2DE.png@!",
+                "Click @age/ImperialAgeIconDE_alpha.png@ (34:26, 850F/680G); 3 Wood/Farm vils build @town_center/Towncenter_aoe2DE.png@ #2 & #3 after clicking Imp!"
             ]
         },
         {

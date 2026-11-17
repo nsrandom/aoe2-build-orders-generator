@@ -618,7 +618,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Feudal Age",
-                            f"Queue +2 Feudal Vils -> Gold\n3 vils build Market (-175W, {mkt_build}s)\n1 vil builds Blacksmith (-150W, 40s)",
+                            f"Queue +2 Feudal Vils -> Gold\n3 Straggler/Wood vils build Market (-175W, {mkt_build}s) -> return to Wood\n1 Straggler/Wood vil builds Blacksmith (-150W, 40s) -> return to Wood",
                             "FC mode: Dark/Feudal runs at 100%, Castle+ macro at 90% (rule 8.2).",
                         )
 
@@ -633,7 +633,7 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_click_t)} – {sim.fmt_time()}",
                         "Castle Transition",
-                        "Research Double-Bit Axe (-100F, -50W) & Horse Collar (-75F, -75W)\nSeed Farms #3–#5 (-60W each)\nResearch Gold Mining (-100F, -75W)\n1 vil builds Lumber Camp #2 (-100W)\n1 vil builds Barracks (-175W) -> Stable #1 (-175W)\nResearch Fletching (-100F, -50G)",
+                        "Research Double-Bit Axe (-100F, -50W) & Horse Collar (-75F, -75W)\nMove 3 Stragglers/Wood -> Seed Farms #3–#5 (-60W each)\nResearch Gold Mining (-100F, -75W)\n1 Wood/Straggler vil builds Lumber Camp #2 (-100W) -> Wood\n1 Wood/Straggler vil builds Barracks (-175W) -> Stable #1 (-175W) -> Wood\nResearch Fletching (-100F, -50G)",
                         "Castle Transition (160s); DBA deferred until Castle click per tight FC exception (rule 6.3); sequential Barracks -> Stable #1 saves 20s walk.",
                     )
 
@@ -660,7 +660,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Castle Age",
-                            f"6 vils build Defensive Castle (-650S, 75s){bow_saw_line}\nQueue Vil #{len(sim.vils)+1} (keep TC #1 continuous)",
+                            f"6 Wood vils build Defensive Castle (-650S, 75s) -> return to Wood{bow_saw_line}\nQueue Vil #{len(sim.vils)+1} (keep TC #1 continuous)",
                             f"Castle ready {sim.fmt_time(def_castle_ready_t)} (0s wait); 90% Castle+ macro efficiency buffer active (rule 8.2).",
                         )
                     else:
@@ -668,7 +668,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Castle Age",
-                            f"Queue Vil #{len(sim.vils)+1}{bow_saw_line}\n6 vils build Defensive Castle (-650S) once 650 Stone arrives",
+                            f"Queue Vil #{len(sim.vils)+1}{bow_saw_line}\n6 Wood/Straggler vils build Defensive Castle (-650S) once 650 Stone arrives",
                             "90% Castle+ macro efficiency buffer active.",
                         )
 
@@ -694,9 +694,9 @@ def run_italians_arena_strategy(
                     milestones["imp_arrival_army"] = dict(sim.military_units)
 
                     trans_txt = (
-                        "3 vils build TC #2 & TC #3 (-275W, -100S each)\nContinue Genoese + Light Cavalry + Battering Rams"
+                        "3 Wood/Farm vils build TC #2 & TC #3 (-275W, -100S each) -> return\nContinue Genoese + Light Cavalry + Battering Rams"
                         if is_1tc
-                        else f"Continue 4-TC Vils (to {len(sim.vils)} vils)\nAdd Forward Castles / Siege Workshop #2 & scale military"
+                        else f"Continue 4-TC Vils (to {len(sim.vils)} vils)\nAdd Forward Castles / Siege Workshop #2 (from Wood) & scale military"
                     )
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
@@ -770,7 +770,7 @@ def run_italians_arena_strategy(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 sim.fmt_time(),
                 "Feudal Transition",
-                f"Move {moved_w} Sheep vils -> Wood at LC #1\nMove remaining Sheep vils -> Stragglers\nSeed up to 2 Farms (-60W each)",
+                f"Move {moved_w} TC Sheep vil -> Wood at LC #1\nMove remaining TC Sheep vils -> Stragglers\nMove up to 2 Straggler vils -> Seed Farms (-60W each)",
                 "Sheep #8 finishes; cap LC #1 at 8 vils (rule 3.4); reserve 325W for Market + Blacksmith; 2s TC farm walk (rule 2.7).",
             )
 
@@ -829,7 +829,7 @@ def run_italians_arena_strategy(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(),
                     "Feudal Age",
-                    f"Click Castle Age (-{castle_cost.food:.0f}F, -{castle_cost.gold:.0f}G, 160s)\nMove {moved_g} Market/Blacksmith builders -> Gold",
+                    f"Click Castle Age (-{castle_cost.food:.0f}F, -{castle_cost.gold:.0f}G, 160s)\nMove {moved_g} Wood/Straggler vils (Market/Blacksmith builders) -> Gold",
                     f"Italians -15% Age Up; {sim.count_role('gold')} total on Gold; reaches Castle Age at {sim.fmt_time(t + int(castle_time))}.",
                 )
 
@@ -1006,7 +1006,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{milestones.get('ballistics_str', sim.fmt_time())} – {sim.fmt_time()}",
                             "Castle Age",
-                            "Send Loom vil forward (60s walk) -> Build Forward Siege Workshop (-200W)\nTrain 3–4 Battering Rams (-160W, -75G each)\n1 vil builds Stable #2 (-175W)\nResearch Heavy Plow (-125F, -125W)\nContinue Genoese + Light Cavalry (1 TC)",
+                            "Send 1 Wood/Farm Loom vil forward (60s walk) -> Build Forward Siege Workshop (-200W)\nTrain 3–4 Battering Rams (-160W, -75G each)\n1 Wood/Farm vil builds Stable #2 (-175W) -> Wood\nResearch Heavy Plow (-125F, -125W)\nContinue Genoese + Light Cavalry (1 TC)",
                             f"30+ Army Forward Siege Push ({format_army_counts(sim.military_units).replace('Army: ', '')}); keep 1 TC until Imperial click.",
                         )
                 if (
@@ -1100,7 +1100,7 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(army20_t or t)} – {sim.fmt_time()}",
                         "Castle Age",
-                        f"Pause military briefly\n3 vils build TC #2 (-275W, -100S, 90s)\n3 vils build TC #3 (-275W, -100S, 90s)\nAssign 3-TC Vils -> Farms (to {f_cnt_s2}+)\nResearch Wheelbarrow (-175F, -50W)",
+                        f"Pause military briefly\n3 Wood/Farm vils build TC #2 (-275W, -100S, 90s) -> return\n3 Wood/Farm vils build TC #3 (-275W, -100S, 90s) -> return\nAssign 3-TC Vils -> Farms (to {f_cnt_s2}+)\nResearch Wheelbarrow (-175F, -50W)",
                         "3-TC boom established -> resume & maximize army.",
                     )
 
@@ -1175,7 +1175,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{sim.fmt_time(boom3tc_setup_t or t)} – {sim.fmt_time()}",
                             "Castle Age",
-                            "Train Genoese Crossbowmen + Light Cavalry continuously\n1 vil builds University (-200W) -> Research Ballistics\nSend 8 Loom vils forward (60s walk) -> Build Castles #2/#3, TC #4 & Siege Workshop\nBank 850F / 680G",
+                            "Train Genoese Crossbowmen + Light Cavalry continuously\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics\nSend 8 Loom Wood/Farm vils forward (60s walk) -> Build Castles #2/#3, TC #4 & Siege Workshop -> return to Wood\nMove 4 Stone vils -> Gold after Castle #3\nBank 850F / 680G",
                             f"3-TC full flood; Ballistics at 20+ Genoese; army at Imp prep: {format_army_counts(sim.military_units).replace('Army: ', '')}.",
                         )
 
@@ -1474,7 +1474,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                             "Castle Age",
-                            f"1 vil builds Monastery (-175W); train 2 Monks (-100G each)\nTrain Genoese Crossbowmen + Light Cavalry continuously\n1 vil builds University (-200W) -> Research Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G)",
+                            f"1 Wood/Straggler/Gold vil builds Monastery (-175W); train 2 Monks (-100G each)\nMove 2 Stone vils -> Wood after Defensive Castle finishes\nTrain Genoese Crossbowmen + Light Cavalry continuously\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G)",
                             "Monk #1 secures Relic (+30G/min); Italians -25% University techs; Ballistics prioritized at 20+ Genoese ahead of extra Stables/SW per rule 6.4.",
                         )
 
@@ -1682,24 +1682,24 @@ def run_italians_arena_strategy(
             RTSOverlayStep(
                 villager_count=28, age=3, wood=10, food=9, gold=5, stone=4,
                 notes=[
-                    f"Click {I['castle_age']}: {I['double_bit_axe']} + {I['horse_collar']}, Farms #3-#5, {I['gold_mining']}, {I['barracks']} -> {I['stable']} #1 & Fletching.",
-                    f"Reach {I['castle_age']} ({castle_r_str}, 650+ {I['stone']}): Drop Defensive {I['castle']}, {I['bow_saw']}, continuous 1 {I['town_center']}.",
+                    f"Click {I['castle_age']}: move 3 Wood/Straggler builders -> {I['gold']}; {I['double_bit_axe']} + {I['horse_collar']}, Farms #3-#5 (from Stragglers/Wood), {I['gold_mining']}, {I['barracks']} -> {I['stable']} #1 (from Wood) & Fletching.",
+                    f"Reach {I['castle_age']} ({castle_r_str}, 650+ {I['stone']}): 6 Wood vils build Defensive {I['castle']}, {I['bow_saw']}, continuous 1 {I['town_center']}.",
                 ],
             ),
             RTSOverlayStep(
                 villager_count=bal_vils, age=3,
                 wood=bal_alloc["wood"], food=bal_alloc["food"], gold=bal_alloc["gold"], stone=bal_alloc["stone"],
                 notes=[
-                    f"Build {I['monastery']} (2 Monks, 1 Relic = +30G/min) + Genoese & {I['light_cavalry']}; drop 2 {I['stone']} -> {I['wood']}.",
-                    f"At 20+ Genoese: prioritize {I['university']} -> {I['ballistics']} ({bal_str}, -25% Italians) ahead of extra buildings!",
+                    f"Build {I['monastery']} (from Wood/Gold; 2 Monks, 1 Relic = +30G/min) + Genoese & {I['light_cavalry']}; move 2 {I['stone']} vils -> {I['wood']}.",
+                    f"At 20+ Genoese: 1 Wood vil builds {I['university']} -> {I['ballistics']} ({bal_str}, -25% Italians) ahead of extra buildings!",
                 ],
             ),
             RTSOverlayStep(
                 villager_count=imp_c_vils, age=3,
                 wood=imp_c_alloc["wood"], food=imp_c_alloc["food"], gold=imp_c_alloc["gold"], stone=imp_c_alloc["stone"],
                 notes=[
-                    f"At 30+ Army: send Loom vil forward (60s walk) -> Forward {I['siege_workshop']} & 3-4 {I['battering_ram']}s + Stable #2; stick to 1 {I['town_center']}!",
-                    f"Click {I['imperial_age']} ({imp_c_str}, 850F/680G); add {I['town_center']} #2 & #3 after clicking Imp!",
+                    f"At 30+ Army: send 1 Wood/Farm Loom vil forward (60s walk) -> Forward {I['siege_workshop']} & 3-4 {I['battering_ram']}s + Stable #2 (from Wood); stick to 1 {I['town_center']}!",
+                    f"Click {I['imperial_age']} ({imp_c_str}, 850F/680G); 3 Wood/Farm vils build {I['town_center']} #2 & #3 after clicking Imp!",
                 ],
             ),
             RTSOverlayStep(
@@ -1716,14 +1716,14 @@ def run_italians_arena_strategy(
             RTSOverlayStep(
                 villager_count=28, age=3, wood=10, food=9, gold=5, stone=4,
                 notes=[
-                    f"Click {I['castle_age']}: {I['double_bit_axe']} + {I['horse_collar']}, Farms #3-#5, {I['gold_mining']}, {I['barracks']} -> {I['stable']} #1 & Fletching.",
-                    f"Reach {I['castle_age']} ({castle_r_str}, 650+ {I['stone']}): Drop Defensive {I['castle']}, {I['bow_saw']}, continuous {I['town_center']} #1.",
+                    f"Click {I['castle_age']}: move 3 Wood/Straggler builders -> {I['gold']}; {I['double_bit_axe']} + {I['horse_collar']}, Farms #3-#5 (from Stragglers/Wood), {I['gold_mining']}, {I['barracks']} -> {I['stable']} #1 (from Wood) & Fletching.",
+                    f"Reach {I['castle_age']} ({castle_r_str}, 650+ {I['stone']}): 6 Wood vils build Defensive {I['castle']}, {I['bow_saw']}, continuous {I['town_center']} #1.",
                 ],
             ),
             RTSOverlayStep(
                 villager_count=42, age=3, wood=14, food=18, gold=6, stone=4,
                 notes=[
-                    f"Build ~20 Army (13 Genoese + 7 {I['light_cavalry']}) with early upgrades; then PAUSE military & drop {I['town_center']} #2 & #3!",
+                    f"Build ~20 Army (13 Genoese + 7 {I['light_cavalry']}) with early upgrades; then PAUSE military & 3 Wood/Farm vils drop {I['town_center']} #2 & #3!",
                     f"Prioritize 3-TC continuous {I['villager']}s, {I['farm']}s (22+) & {I['wheelbarrow']} ({milestones.get('boom3tc_setup_str', '25:00')}).",
                 ],
             ),
@@ -1731,7 +1731,7 @@ def run_italians_arena_strategy(
                 villager_count=imp_c_vils, age=3,
                 wood=imp_c_alloc["wood"], food=imp_c_alloc["food"], gold=imp_c_alloc["gold"], stone=imp_c_alloc["stone"],
                 notes=[
-                    f"Maximize Genoese + {I['light_cavalry']}; at 20+ Genoese prioritize {I['university']} -> {I['ballistics']} ({bal_str}, -25%); send 8 Loom vils forward (60s) for Castle #2/#3, TC #4 & {I['siege_workshop']}!",
+                    f"Maximize Genoese + {I['light_cavalry']}; at 20+ Genoese 1 Wood vil builds {I['university']} -> {I['ballistics']} ({bal_str}, -25%); send 8 Loom Wood/Farm vils forward (60s) for Castle #2/#3, TC #4 & {I['siege_workshop']}!",
                     f"Click {I['imperial_age']} ({imp_c_str}, 850F/680G) well before 40:00.",
                 ],
             ),
@@ -1751,8 +1751,8 @@ def run_italians_arena_strategy(
         RTSOverlayStep(villager_count=15, age=1, wood=4, food=11, gold=0, stone=0, notes=[f"Vils #12-#15 (4 vils) -> 6 Chickens on {I['mill']} #1 (Vil #12 builds {I['mill']}, Vil #13 builds House #3). Lure 2nd {I['boar']} before 1st finishes."]),
         RTSOverlayStep(villager_count=19, age=1, wood=4, food=15, gold=0, stone=0, notes=[f"Vils #16-#19 (4 vils) -> {I['berries']} (1st builds {I['mill']} #2, 3rd builds House #4)."]),
         RTSOverlayStep(villager_count=23, age=1, wood=4, food=15, gold=0, stone=4, notes=[f"Vils #20-#23 (4 vils) -> {I['stone']} (1st builds {I['mining_camp']}, 4th builds House #5)."]),
-        RTSOverlayStep(villager_count=26, age=1, wood=7, food=15, gold=0, stone=4, notes=[f"Vils #24-#26 (3 vils) -> {I['wood']} (7 on LC #1). Click {I['feudal_age']} (425F); Sheep #8 finishes -> seed up to 2 {I['farm']}s + cap LC #1 at 8."]),
-        RTSOverlayStep(villager_count=28, age=2, wood=11, food=11, gold=2, stone=4, notes=[f"In {I['feudal_age']}: Vils #27-#28 -> {I['gold']} (1st builds {I['mining_camp']}); 3 vils {I['build']} {I['market']} & 1 vil {I['blacksmith']}.", f"Sell 100 {I['stone']} at {I['market']} (+91G) & click {I['castle_age']} (680F, 170G)."]),
+        RTSOverlayStep(villager_count=26, age=1, wood=7, food=15, gold=0, stone=4, notes=[f"Vils #24-#26 (3 vils) -> {I['wood']} (7 on LC #1). Click {I['feudal_age']} (425F); Sheep #8 finishes -> move 1 Sheep vil to {I['wood']} (8 at LC #1), remaining Sheep vils -> Stragglers & move up to 2 Stragglers -> {I['farm']}s."]),
+        RTSOverlayStep(villager_count=28, age=2, wood=11, food=11, gold=2, stone=4, notes=[f"In {I['feudal_age']}: Vils #27-#28 -> {I['gold']} (1st builds {I['mining_camp']}); 3 Straggler/Wood vils {I['build']} {I['market']} & 1 builds {I['blacksmith']}.", f"Sell 100 {I['stone']} at {I['market']} (+91G) & click {I['castle_age']} (680F, 170G); move 3 Wood/Straggler builders -> {I['gold']}."]),
         *castle_steps,
     ]
 

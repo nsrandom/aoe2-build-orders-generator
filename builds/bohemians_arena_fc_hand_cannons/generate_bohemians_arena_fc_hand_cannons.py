@@ -254,8 +254,13 @@ def run_bohemians_1tc_fast_hc(
     imp_click_t = 0
     imp_reached_t: Optional[int] = None
 
+    extra_castles_started = 0
+    extra_castle_ready_t: Optional[int] = None
+
     last_market_trade_t = -999
     last_lc_refresh_t = -999
+    v37_loop_logged = False
+    v46_pre_stone_logged = False
     mil_loop_logged = False
     tc_expand_logged = False
     fwd_loop_logged = False
@@ -629,7 +634,7 @@ def run_bohemians_1tc_fast_hc(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Feudal Age",
-                            f"Queue +2 Feudal Vils -> Wood\n3 vils build Market (-175W, {mkt_build}s)\n1 vil builds Blacksmith (-{bs_cost.wood:.0f}W, 40s)",
+                            f"Queue +2 Feudal Vils -> Wood\n3 Straggler/Wood vils build Market (-175W, {mkt_build}s) -> return to Wood\n1 Straggler/Wood vil builds Blacksmith (-{bs_cost.wood:.0f}W, 40s) -> return to Wood",
                             "Free Gold/Stone Mining (+15%); Bohemians save 100W on Blacksmith + Mining Camp techs; 110G ready -> sell 100S for +91G (saving 200W).",
                         )
 
@@ -646,7 +651,7 @@ def run_bohemians_1tc_fast_hc(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_click_t)} – {sim.fmt_time()}",
                         "Castle Transition",
-                        "Research Double-Bit Axe (-100F, -50W)\nResearch Horse Collar (-75F, -75W)\n1 vil builds Gold Mining Camp (-100W); 4 vils -> Gold\n1 vil builds Barracks (-175W)",
+                        "Research Double-Bit Axe (-100F, -50W)\nResearch Horse Collar (-75F, -75W)\nMove 4 Straggler/Wood vils -> Gold (1st builds Gold Mining Camp [-100W])\n1 Wood/Straggler vil builds Barracks (-175W) -> Wood",
                         "Castle Transition (160s); Barracks & Gold MC complete early using saved 200W so University + Range #1 drop immediately at 14:26.",
                     )
 
@@ -667,7 +672,7 @@ def run_bohemians_1tc_fast_hc(
                         sim.add_building("university", univ_ready_t)
                         _pull_builders(sim, ("straggler", "wood"), 1, univ_ready_t + 10)
                         milestones["univ_ready_str"] = sim.fmt_time(univ_ready_t)
-                        castle_acts.append(f"1 vil builds University (-{univ_cost.wood:.0f}W, 60s)")
+                        castle_acts.append(f"1 Wood/Straggler vil builds University (-{univ_cost.wood:.0f}W, 60s) -> Wood")
 
                     if barracks_ready_t is not None and t >= barracks_ready_t and ranges_started == 0 and sim.bank.wood >= 175:
                         ranges_started = 1
@@ -677,7 +682,7 @@ def run_bohemians_1tc_fast_hc(
                         sim.add_building("archery range", r_ready)
                         _pull_builders(sim, ("straggler", "wood"), 1, r_ready + 10)
                         milestones["range1_ready_str"] = sim.fmt_time(r_ready)
-                        castle_acts.append("1 vil builds Archery Range #1 (-175W, 50s)")
+                        castle_acts.append("1 Wood/Straggler vil builds Archery Range #1 (-175W, 50s) -> Wood")
 
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
@@ -759,15 +764,18 @@ def run_bohemians_1tc_fast_hc(
             and sim.active_carcass_food["sheep"] <= 1e-6
         ):
             sheep_post_logged = True
+            moved_sh = 0
             for v in sim.vils:
                 if v["role"] in ("straggler", "sheep") and int(v["busy_until"]) <= t:
+                    if v["role"] == "sheep":
+                        moved_sh += 1
                     v["role"] = "straggler"
                     v["busy_until"] = t + int(rules.straggler_walk_time)
             add_row(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 sim.fmt_time(),
                 "Feudal Transition",
-                "Move TC Sheep vils -> Stragglers\nSeed up to 8 Farms (-60W each)",
+                f"Move {moved_sh} TC Sheep vils -> Stragglers\nMove up to 8 Straggler vils -> Seed Farms (-60W each)",
                 "Sheep #8 finishes under TC; reserve 225W for Market + Blacksmith (no 200W sale needed since selling 100S).",
             )
 
@@ -1068,25 +1076,51 @@ def run_bohemians_1tc_fast_hc(
                 _pull_builders(sim, ("wood", "farm"), 1, sw_ready_t + 10)
                 milestones["sw_ready_str"] = sim.fmt_time(sw_ready_t)
 
-            # Build Stone Mining Camp (-100W) & send 7 vils to Stone once Ranges #2-#3 & SW are placed (to mine 750S: 100S TC #3 + 650S Forward Castle!)
+            # Pre-Stone milestone row at Vil #46 (explains allocations right before moving Wood vils to Stone!)
+            if (
+                sim.age == 3
+                and v37_loop_logged
+                and not v46_pre_stone_logged
+                and not stone_ramp_started
+                and len(sim.vils) == 46
+                and sw_started
+            ):
+                v46_pre_stone_logged = True
+                milestones["v46_str"] = sim.fmt_time(t)
+                milestones["v46_alloc"] = sim.current_macro_alloc()
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    f"{milestones.get('v37_str', sim.fmt_time())} – {sim.fmt_time(t)}",
+                    "Castle Age",
+                    "Queue Vils #38–#46 -> Wood (shift 3 Wood vils -> Gold to 10 Gold)\nWood vils build Archery Ranges #2 & #3 (-175W each), LC #2 (-100W) & Siege Workshop (-200W) -> Wood\nResearch Pikeman (-160F, -90G) & train Pikemen at Barracks",
+                    f"Pre-Stone allocation at Vil #46 ({sim.count_role('farm')} Farms, {sim.count_role('wood', 'straggler')} Wood, {sim.count_role('gold')} Gold, 0 Stone) before moving Wood vils to Stone.",
+                )
+
+            # Build Stone Mining Camp (-100W) & move 7 Wood vils to Stone once Ranges #2-#3 & SW are placed (keep 7 on Stone permanently!)
             if ranges_started >= 3 and sw_started and not stone_ramp_started and sim.bank.wood >= (100 + house_wood_res):
                 stone_ramp_started = True
                 sim.spend(ResourceBundle(wood=100), "StoneMC")
                 smc_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
                 sim.add_building("mining camp", smc_comp)
                 moved_s = 0
-                for v in sim.vils:
-                    if v["role"] in ("wood", "farm") and int(v["busy_until"]) <= t and moved_s < 7:
-                        v["role"] = "stone"
-                        v["busy_until"] = smc_comp if moved_s == 0 else (t + int(rules.camp_or_berry_walk_time_one_way))
-                        moved_s += 1
+                moved_from_counts = {"wood": 0, "farm": 0}
+                for pref_r in ("wood", "farm"):
+                    for v in sim.vils:
+                        if v["role"] == pref_r and int(v["busy_until"]) <= t and moved_s < 7:
+                            v["role"] = "stone"
+                            v["busy_until"] = smc_comp if moved_s == 0 else (t + int(rules.camp_or_berry_walk_time_one_way))
+                            moved_s += 1
+                            moved_from_counts[pref_r] += 1
                 milestones["stone_started_str"] = sim.fmt_time(t)
+                milestones["stone_started_vils"] = len(sim.vils)
+                milestones["stone_started_alloc"] = sim.current_macro_alloc()
+                src_desc = "Wood" if moved_from_counts["farm"] == 0 else f"{moved_from_counts['wood']} Wood / {moved_from_counts['farm']} Farm"
                 add_row(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     sim.fmt_time(t),
                     "Castle Age",
-                    "1 vil builds Mining Camp (-100W) on Stone\nMove 7 vils -> Stone",
-                    "Ready +50s; leftover 100S pays for TC #2, and 7 Stone miners (~165S/min w/ Free Stone Mining + Stone Shaft Mining) gather 750S for TC #3 (100S) + Forward Castle (650S).",
+                    f"Vil #47 -> Wood\n1 Wood vil builds Mining Camp (-100W) on Stone\nMove 7 {src_desc} vils (including builder) -> Stone",
+                    "Ready +50s; leftover 100S pays for TC #2, and all 7 Stone miners stay on Stone (~165S/min w/ Free Stone + Shaft Mining) for TC #3 (100S), Forward Castle (650S), extra Castles & repairs.",
                 )
 
             # TC #2 (uses our remaining 100S!) & TC #3 unlock after 1-Range HC starts + Ranges #2-#3 & SW are started!
@@ -1158,21 +1192,7 @@ def run_bohemians_1tc_fast_hc(
                         sim.register_new_farm(t + walk_t + 15)
                         break
 
-            # Stop mining stone once needed Stone (650S after TC #3, or 750S if TC #3 not yet spent) is banked!
-            stone_cap_now = 655 if tc3_started else 755
-            if stone_ramp_started and (sim.bank.stone >= stone_cap_now or fwd_castle_started) and sim.count_role("stone") > 0:
-                cur_camp = max(0, len(sim.lumber_camps) - 1)
-                for v in sim.vils:
-                    if v["role"] == "stone" and int(v["busy_until"]) <= t:
-                        if sim.count_role("farm") < 32 and sim.bank.wood >= (60 + house_wood_res + bldg_w_res):
-                            sim.spend(ResourceBundle(wood=60), "StoneToFarm")
-                            v["role"] = "farm"
-                            v["busy_until"] = t + 30
-                            sim.register_new_farm(t + 30)
-                        else:
-                            v["role"] = "gold" if sim.bank.gold < 600 else "wood"
-                            v["camp_idx"] = cur_camp
-                            v["busy_until"] = t + 15
+            # Keep the 7 Stone vils on Stone permanently so player can build extra Castles and/or repair them.
 
             if chemistry_ready_t is not None and t >= chemistry_ready_t and not chemistry_logged:
                 chemistry_logged = True
@@ -1180,7 +1200,7 @@ def run_bohemians_1tc_fast_hc(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                     "Castle Age",
-                    "1 vil builds University (-100W)\nResearch Chemistry (-300F, -200G, 100s)\n1 vil builds Archery Range #1 (-175W)\nQueue Vils (1 TC) -> Wood / Farms / Gold",
+                    "University completes -> Research Chemistry (-300F, -200G, 100s)\n1 Wood vil builds Archery Range #1 (-175W) -> Wood\n1 Wood vil builds Monastery (-175W) -> Wood\nQueue Vils #27–#32 -> Wood & seed Farm #9 (-60W, from Wood)",
                     f"Bohemians save 100W on University; Chemistry finishes at {sim.fmt_time()} for immediate 1-Range Hand Cannoneers.",
                 )
 
@@ -1286,14 +1306,14 @@ def run_bohemians_1tc_fast_hc(
                 rax_busy_until = t + (17 if "conscription" in sim.upgrades else 22)
                 sim.military_units["pikeman"] += 1
 
-            if not mil_loop_logged and ranges_started >= 3 and sw_started and sim.military_units["mangonel"] >= 2:
+            if not mil_loop_logged and stone_ramp_started and ranges_started >= 3 and sw_started and sim.military_units["mangonel"] >= 2:
                 mil_loop_logged = True
                 add_row(
                     f"{len(sim.vils)} ({sim.total_pop()})",
-                    f"{milestones.get('first_hc_str', sim.fmt_time())} – {sim.fmt_time()}",
+                    f"{milestones.get('stone_started_str', sim.fmt_time())} – {sim.fmt_time()}",
                     "Castle Age",
-                    "Train Hand Cannoneers from Range #1\n1 vil builds Monastery (-175W); train 2 Monks (-100G each)\n1st vil builds Archery Ranges #2 & #3 (-175W each)\n1 vil builds Siege Workshop (-200W); train 2+ Mangonels\nResearch Pikeman (-160F, -90G); train Pikemen\nQueue Loom (-50G)",
-                    f"Monastery built ahead of Range #2; Monk #1 captures Relic (+30G/min); army online: {format_army_counts(current_army_dict()).replace('Army: ', '')}.",
+                    "Continue 3-Range Hand Cannoneers + 2+ Mangonels (-160W, -135G each) + Pikemen\nQueue Vils #48–#50 -> Wood & seed Farm #15 (-60W, from Wood)\nKeep all 7 vils on Stone",
+                    f"3-Range + Siege production online ({format_army_counts(current_army_dict()).replace('Army: ', '')}); 7 Stone miners banking 750S for TC #3 + Forward Castle.",
                 )
 
             if not tc_expand_logged and tc3_ready_t is not None and t >= tc3_ready_t:
@@ -1305,11 +1325,11 @@ def run_bohemians_1tc_fast_hc(
                     f"{len(sim.vils)} ({sim.total_pop()})",
                     f"{milestones.get('tc2_started_str', sim.fmt_time())} – {sim.fmt_time()}",
                     "Castle Age",
-                    "3 vils build TC #2 (-275W, -100S)\n3 vils build TC #3 (-275W, -100S)\n1 vil builds Lumber Camp #2 (-100W)\nResearch Wheelbarrow (-175F, -50W)\nQueue 3-TC Vils -> Farms / Wood / Gold",
+                    "3 Wood/Farm vils build TC #2 (-275W, -100S) -> return to Wood/Farms\n3 Wood/Farm vils build TC #3 (-275W, -100S) -> return to Wood/Farms\nQueue 3-TC Vils -> Farms / Wood / Gold (keep 7 on Stone)",
                     f"TC #2 uses remaining 100S from Dark Age; 3-TC eco + 3-Range production active ({format_army_counts(current_army_dict()).replace('Army: ', '')}).",
                 )
 
-            # Forward Castle expedition (8 Loom vils, 60s walk per rule 2.10)
+            # Forward Castle expedition (8 Loom vils from Wood/Farms, 60s walk per rule 2.10; never pull Stone miners)
             if (
                 "chemistry" in sim.upgrades
                 and "loom" in sim.upgrades
@@ -1322,11 +1342,19 @@ def run_bohemians_1tc_fast_hc(
                 fwd_vils_dispatched = True
                 fwd_vils_arrive_t = t + int(rules.forward_walk_time_default)
                 milestones["fwd_vils_dispatched_str"] = sim.fmt_time(t)
-                for v in sim.vils:
-                    if v["role"] in ("wood", "farm", "stone") and int(v["busy_until"]) <= t and len(fwd_vils) < 8:
-                        v["role"] = "forward"
-                        v["busy_until"] = fwd_vils_arrive_t + 120
-                        fwd_vils.append(v)
+                fwd_src = {"wood": 0, "farm": 0}
+                for pref_r in ("wood", "farm"):
+                    for v in sim.vils:
+                        if v["role"] == pref_r and int(v["busy_until"]) <= t and len(fwd_vils) < 8:
+                            v["role"] = "forward"
+                            v["busy_until"] = fwd_vils_arrive_t + 120
+                            fwd_vils.append(v)
+                            fwd_src[pref_r] += 1
+                milestones["fwd_vils_src_str"] = (
+                    "Wood"
+                    if fwd_src["farm"] == 0
+                    else f"{fwd_src['wood']} Wood / {fwd_src['farm']} Farm"
+                )
 
             if fwd_vils_arrive_t is not None and t >= fwd_vils_arrive_t and not fwd_castle_started and sim.bank.stone >= 650:
                 fwd_castle_started = True
@@ -1338,12 +1366,6 @@ def run_bohemians_1tc_fast_hc(
                 milestones["fwd_castle_ready_str"] = sim.fmt_time(fwd_castle_ready_t)
                 for v in fwd_vils:
                     v["busy_until"] = fwd_castle_ready_t
-                cur_camp = max(0, len(sim.lumber_camps) - 1)
-                for v in sim.vils:
-                    if v["role"] == "stone":
-                        v["role"] = "gold" if sim.bank.gold < 750 else "wood"
-                        v["camp_idx"] = cur_camp
-                        v["busy_until"] = t + 15
 
             if fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
                 cur_camp = max(0, len(sim.lumber_camps) - 1)
@@ -1367,16 +1389,30 @@ def run_bohemians_1tc_fast_hc(
                 milestones["imp_prep_str"] = sim.fmt_time(t)
                 if not fwd_loop_logged:
                     fwd_loop_logged = True
+                    fwd_src_lbl = str(milestones.get("fwd_vils_src_str", "Wood/Farm"))
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{milestones.get('fwd_vils_dispatched_str', sim.fmt_time())} – {sim.fmt_time()}",
                         "Castle Age",
-                        "Send 8 Loom vils forward (60s walk)\n8 vils build Forward Castle (-650S, 60s)\nAssign 3-TC Vils -> Farms / Wood / Gold to bank 1000F / 800G",
+                        f"Send 8 Loom {fwd_src_lbl} vils forward (60s walk)\n8 vils build Forward Castle (-650S, 60s) -> return to Wood\nKeep 7 vils on Stone (for extra Castles & repairs)\nAssign 3-TC Vils -> Farms / Wood / Gold to bank 1000F / 800G",
                         f"Forward Castle ready {milestones.get('fwd_castle_ready_str', '')}; satisfies Imperial Age building req w/ University/SW (rule 4.6).",
                     )
 
-            # Trebuchets & Imperial Techs
+            # Trebuchets, extra Castles (from kept 7 Stone miners!) & Imperial Techs
             if sim.age == 4 and fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
+                if (
+                    extra_castles_started < 2
+                    and (extra_castle_ready_t is None or t >= extra_castle_ready_t)
+                    and sim.bank.stone >= 650
+                ):
+                    extra_castles_started += 1
+                    sim.spend(ResourceBundle(stone=650), f"Castle{extra_castles_started + 1}")
+                    c_ex = int(round(calc_construction_time(200.0, 6)))
+                    extra_castle_ready_t = t + 10 + c_ex
+                    sim.add_pending_pop_building(extra_castle_ready_t, 20, "castle")
+                    _pull_builders(sim, ("wood", "farm"), 6, extra_castle_ready_t + 10)
+                    milestones[f"castle{extra_castles_started + 1}_str"] = sim.fmt_time(extra_castle_ready_t)
+
                 if t >= castle_busy_until:
                     treb_target = 4
                     treb_train_s = 38 if "conscription" in sim.upgrades else 50
@@ -1426,7 +1462,7 @@ def run_bohemians_1tc_fast_hc(
                 min_gold_vils = 10 if ranges_started >= 3 else 4
                 if sim.bank.gold > gold_float_thresh and g_cnt_r > min_gold_vils:
                     stone_target_chk = 660 if tc3_started else 760
-                    if stone_ramp_started and not fwd_castle_started and sim.bank.stone < stone_target_chk and s_cnt_r < 8:
+                    if stone_ramp_started and not fwd_castle_started and sim.bank.stone < stone_target_chk and s_cnt_r < 7:
                         moved = 0
                         for v in sim.vils:
                             if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
@@ -1518,6 +1554,25 @@ def run_bohemians_1tc_fast_hc(
                             last_market_trade_t = t
                             sim.sell_at_market("food", 200)
 
+            # Log Vils #32-#37 transition right after Berries finish -> 14 Farms, Wheelbarrow & 3 Wood vils -> Gold
+            if (
+                sim.age == 3
+                and chemistry_logged
+                and not v37_loop_logged
+                and len(sim.vils) >= 37
+                and sim.count_role("gold") >= 7
+            ):
+                v37_loop_logged = True
+                milestones["v37_str"] = sim.fmt_time(t)
+                milestones["v37_alloc"] = sim.current_macro_alloc()
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    f"{milestones.get('first_hc_str', sim.fmt_time())} – {sim.fmt_time(t)}",
+                    "Castle Age",
+                    "Train Hand Cannoneers at Range #1 & 2 Monks (-100G each) at Monastery\nQueue Loom (-50G) at TC\nAt Vil #33: 4 Berry vils finish -> move from Berries to Wood/Stragglers; move 5 Wood/Straggler vils -> Seed Farms #10–#14 (-60W each)\nAt Vil #36: Research Wheelbarrow (-175F, -50W, 75s)\nAt Vil #37: Move 3 Wood vils -> Gold (4 -> 7 Gold)",
+                    f"Monk #1 secures Relic (+30G/min); explains Vils #32–#37 transition to 14 Farms / 16 Wood / 7 Gold ({format_army_counts(current_army_dict()).replace('Army: ', '')}).",
+                )
+
         # Completion criterion
         if (
             sim.age == 4
@@ -1543,7 +1598,7 @@ def run_bohemians_1tc_fast_hc(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
                 "Imperial Age",
-                "Continue Hand Cannoneers (3 Ranges) + Mangonels + Halberdiers + Trebuchets\nResearch Hand Cart (-300F, -200W) & Wagenburg Tactics (-300F, -300G)",
+                "Continue Hand Cannoneers (3 Ranges) + Mangonels + Halberdiers + Trebuchets\n6 Wood/Farm vils build extra Castle(s) (-650S each) while keeping 7 vils on Stone\nResearch Hand Cart (-300F, -200W) & Wagenburg Tactics (-300F, -300G)",
                 f"Full Imperial composition online ({len(sim.vils)} Vils + {sum(current_army_dict().values())} Military = {sim.total_pop()} Pop): {format_army_counts(current_army_dict()).replace('Army: ', '')}. Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
             )
             break
@@ -1595,9 +1650,14 @@ def run_bohemians_1tc_fast_hc(
     imp_r_str = str(milestones.get("imp_reached_str", "33:10"))
     castle_r_str = str(milestones.get("castle_reached_str", "14:26"))
     castle_arr_alloc = dict(milestones.get("castle_arrival_alloc", {"wood": 12, "food": 10, "gold": 4, "stone": 0}))
-    boom_vils = int(milestones.get("boom3tc_vils", 50))
-    boom_alloc = dict(milestones.get("boom3tc_alloc", {"wood": 18, "food": 20, "gold": 8, "stone": 4}))
-    stone_s_str = str(milestones.get("stone_started_str", "24:15"))
+    v37_alloc = dict(milestones.get("v37_alloc", {"wood": 16, "food": 14, "gold": 7, "stone": 0}))
+    v46_alloc = dict(milestones.get("v46_alloc", {"wood": 22, "food": 14, "gold": 10, "stone": 0}))
+    stone_vils_cnt = int(milestones.get("stone_started_vils", 47))
+    stone_alloc = dict(milestones.get("stone_started_alloc", {"wood": 16, "food": 14, "gold": 10, "stone": 7}))
+    stone_s_str = str(milestones.get("stone_started_str", "24:59"))
+    v37_str = str(milestones.get("v37_str", "20:50"))
+    v46_str = str(milestones.get("v46_str", "24:45"))
+    fwd_src_lbl = str(milestones.get("fwd_vils_src_str", "Wood"))
 
     rts_steps = [
         RTSOverlayStep(villager_count=6, age=1, wood=0, food=6, gold=0, stone=0, notes=[f"Vils #1-#6: {I['build']} 2 Houses at 0:00, then all 6 on {I['sheep']} under TC."]),
@@ -1607,37 +1667,51 @@ def run_bohemians_1tc_fast_hc(
         RTSOverlayStep(villager_count=19, age=1, wood=4, food=15, gold=0, stone=0, notes=[f"Vils #16-#19 (4 vils) -> {I['berries']} (1st builds {I['mill']} #2, 3rd builds House #4)."]),
         RTSOverlayStep(villager_count=21, age=1, wood=6, food=15, gold=0, stone=0, notes=[f"Vils #20-#21 (2 vils) -> {I['wood']} at {I['lumber_camp']} #1 (skip Dark Age Gold MC!)."]),
         RTSOverlayStep(villager_count=23, age=1, wood=7, food=16, gold=0, stone=0, notes=[f"Vil #22 builds {I['house']} #5 -> {I['wood']} (7 on Wood); Vil #23 -> {I['sheep']}/Food."]),
-        RTSOverlayStep(villager_count=24, age=1, wood=7, food=16, gold=1, stone=0, notes=[f"Vil #24 -> Long-distance 10 {I['gold']} (finish before {I['market']} completes, then return to Wood/{I['farm']}s)! Click {I['feudal_age']} (500F) at 08:45; Sheep #8 -> Stragglers + up to 8 {I['farm']}s."]),
-        RTSOverlayStep(villager_count=26, age=2, wood=9, food=17, gold=0, stone=0, notes=[f"In {I['feudal_age']}: Free Gold/Stone Mining! Vils #25-#26 -> {I['wood']}; 3 vils {I['build']} {I['market']} & 1 vil Bohemian {I['blacksmith']} (50W!).", f"Sell 100 {I['stone']} at {I['market']} (+91G -> 201G, saving 200W!) & click {I['castle_age']} (800F, 200G)!"]),
+        RTSOverlayStep(villager_count=24, age=1, wood=7, food=16, gold=1, stone=0, notes=[f"Vil #24 -> Long-distance 10 {I['gold']} (then move from Gold to Stragglers/{I['farm']}s)! Click {I['feudal_age']} (500F) at 08:45; move 12 Sheep vils -> Stragglers & move up to 8 Stragglers -> {I['farm']}s."]),
+        RTSOverlayStep(villager_count=26, age=2, wood=9, food=17, gold=0, stone=0, notes=[f"In {I['feudal_age']}: Free Gold/Stone Mining! Vils #25-#26 -> {I['wood']}; 3 Straggler/Wood vils {I['build']} {I['market']} & 1 builds Bohemian {I['blacksmith']} (50W!).", f"Sell 100 {I['stone']} at {I['market']} (+91G -> 201G, saving 200W!) & click {I['castle_age']} (800F, 200G)!"]),
         RTSOverlayStep(
             villager_count=26, age=3,
             wood=castle_arr_alloc["wood"], food=castle_arr_alloc["food"], gold=castle_arr_alloc["gold"], stone=castle_arr_alloc["stone"],
             notes=[
-                f"Click {I['castle_age']}: {I['double_bit_axe']} + {I['horse_collar']}, {I['mining_camp']} on {I['gold']} (4 vils) & {I['barracks']}.",
-                f"Reach {I['castle_age']} ({castle_r_str}): Stay 1 TC! Drop Bohemian {I['university']} (100W!) + {I['archery_range']} #1 + {I['bow_saw']} -> {I['chemistry']} + {I['monastery']} (175W, 2 {I['monk']}s for Relic +30G/min!) -> 1st {I['hand_cannoneer']} at {first_hc_str}!",
+                f"Click {I['castle_age']}: {I['double_bit_axe']} + {I['horse_collar']}, move 4 Straggler/Wood vils -> {I['gold']} ({I['mining_camp']}) & 1 Wood/Straggler vil builds {I['barracks']}.",
+                f"Reach {I['castle_age']} ({castle_r_str}): Stay 1 TC! Drop Bohemian {I['university']} (100W!) + {I['archery_range']} #1 + {I['bow_saw']} -> {I['chemistry']} + {I['monastery']} (175W, 2 {I['monk']}s -> Relic) -> 1st {I['hand_cannoneer']} at {first_hc_str}!",
             ],
         ),
         RTSOverlayStep(
-            villager_count=boom_vils, age=3,
-            wood=boom_alloc["wood"], food=boom_alloc["food"], gold=boom_alloc["gold"], stone=boom_alloc["stone"],
+            villager_count=37, age=3,
+            wood=v37_alloc["wood"], food=v37_alloc["food"], gold=v37_alloc["gold"], stone=v37_alloc["stone"],
             notes=[
-                f"After {I['monastery']} + 2 {I['monk']}s: add {I['archery_range']} #2 & #3 + {I['siege_workshop']} (2+ {I['mangonel']}s) + {I['pikeman']}s.",
-                f"At {stone_s_str}: {I['mining_camp']} on {I['stone']} (-100W, 7 vils) -> mine 750S for {I['town_center']} #3 (TC #2 uses leftover 100S!) + Forward {I['castle']}!",
+                f"Vils #32-#37 ({first_hc_str} - {v37_str}): 4 Berries vils finish -> move from Berries to Wood/Stragglers; move 5 Wood/Stragglers -> {I['farm']}s (to 14 {I['farm']}s); {I['wheelbarrow']} at Vil #36; move 3 Wood vils -> {I['gold']} (7 {I['gold']}).",
+            ],
+        ),
+        RTSOverlayStep(
+            villager_count=46, age=3,
+            wood=v46_alloc["wood"], food=v46_alloc["food"], gold=v46_alloc["gold"], stone=v46_alloc["stone"],
+            notes=[
+                f"Vils #38-#46 ({v37_str} - {v46_str}): Wood vils build {I['archery_range']} #2 & #3, {I['lumber_camp']} #2 & {I['siege_workshop']}; {I['pikeman']}; move 3 Wood vils -> {I['gold']} (10 {I['gold']}). Pre-Stone Vil #46: 14F / 22W / 10G.",
+            ],
+        ),
+        RTSOverlayStep(
+            villager_count=stone_vils_cnt, age=3,
+            wood=stone_alloc["wood"], food=stone_alloc["food"], gold=stone_alloc["gold"], stone=stone_alloc["stone"],
+            notes=[
+                f"At {stone_s_str} (Vil #47 -> Wood): 1 Wood vil builds {I['mining_camp']} on {I['stone']} (-100W) & move 7 Wood vils -> {I['stone']} (23 -> 16 Wood)!",
+                f"Keep all 7 on {I['stone']} permanently for {I['town_center']} #3 (TC #2 uses leftover 100S!), Forward {I['castle']} (-650S), extra Castles & repairs!",
             ],
         ),
         RTSOverlayStep(
             villager_count=imp_c_vils, age=3,
             wood=imp_c_alloc["wood"], food=imp_c_alloc["food"], gold=imp_c_alloc["gold"], stone=imp_c_alloc["stone"],
             notes=[
-                f"3-Range {I['hand_cannoneer']}s + {I['mangonel']}s + {I['pikeman']}! Send 8 Loom vils forward (60s) -> Forward {I['castle']} (-650S, ready {fwd_c_str}).",
-                f"Click {I['imperial_age']} ({imp_c_str}, 1000F, 800G) cleanly before 40:00.",
+                f"3-TC Boom + 3-Range {I['hand_cannoneer']}s + {I['mangonel']}s + {I['pikeman']}! Send 8 Loom {fwd_src_lbl} vils forward (60s) -> Forward {I['castle']} (-650S, ready {fwd_c_str}).",
+                f"Click {I['imperial_age']} ({imp_c_str}, 1000F, 800G) cleanly before 40:00 while keeping 7 on {I['stone']}.",
             ],
         ),
         RTSOverlayStep(
             villager_count=fin_vils, age=4,
             wood=end_alloc["wood"], food=end_alloc["food"], gold=end_alloc["gold"], stone=end_alloc["stone"],
             notes=[
-                f"Reach {I['imperial_age']} ({imp_r_str}): Conscription, Ring Archer Armor, {I['halberdier']}, Siege Engineers, Wagenburg Tactics + {I['trebuchet']}s from Forward {I['castle']}!",
+                f"Reach {I['imperial_age']} ({imp_r_str}): Conscription, Ring Archer Armor, {I['halberdier']}, Siege Engineers, Wagenburg Tactics + {I['trebuchet']}s & extra {I['castle']}s (-650S from Wood/Farms; keep 7 on {I['stone']})!",
             ],
         ),
     ]
