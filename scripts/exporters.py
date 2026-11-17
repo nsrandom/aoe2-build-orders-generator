@@ -297,6 +297,25 @@ def _format_vils_pop_str(pop_str: str, fallback_vils: int = 0, fallback_mil: int
     return f"{v_part} ({p_part})"
 
 
+def format_vils_pop_range(
+    prev_vils: int,
+    curr_vils: int,
+    pop_start: int,
+    pop_end: int,
+    include_start_vil: bool = False,
+) -> str:
+    """
+    Formats the Vils/Pop cell as 'V_start–V_end (Pop_start–Pop_end)' when a row
+    covers multiple villagers, or 'V_end (Pop_end)' when it covers 0 or 1 villager.
+    """
+    v_start = prev_vils if include_start_vil else (prev_vils + 1)
+    if curr_vils > v_start:
+        if pop_start < pop_end:
+            return f"{v_start}–{curr_vils} ({pop_start}–{pop_end})"
+        return f"{v_start}–{curr_vils} ({pop_end})"
+    return f"{curr_vils} ({pop_end})"
+
+
 def _merge_pop_str(p1: str, p2: str) -> str:
     pop_re = re.compile(
         r"^(?:(\d+)[–-](\d+)|(\d+))v?(?:\s*\((?:(\d+)[–-](\d+)|(\d+))(?:\s*pop)?\))?$"

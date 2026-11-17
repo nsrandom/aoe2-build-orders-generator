@@ -112,8 +112,20 @@ def main() -> None:
     assert ss["gather_rates_per_sec"]["wood"] < 0.34 * 0.91
 
     # Output rule 2.5: 1 food sub-source omits Total column; >=2 sub-sources includes Total
+    import re
     import tempfile
-    from exporters import BuildOrderDocument, DetailedBuildRow, RTSOverlayStep, export_build_order_html
+    from exporters import (
+        BuildOrderDocument,
+        DetailedBuildRow,
+        RTSOverlayStep,
+        export_build_order_html,
+        format_vils_pop_range,
+    )
+
+    assert format_vils_pop_range(3, 6, 4, 7, include_start_vil=True) == "3–6 (4–7)"
+    assert format_vils_pop_range(22, 34, 24, 42) == "23–34 (24–42)"
+    assert format_vils_pop_range(9, 10, 11, 11) == "10 (11)"
+    assert format_vils_pop_range(108, 108, 177, 195) == "108 (195)"
 
     with tempfile.TemporaryDirectory() as tmpd:
         doc = BuildOrderDocument(
@@ -132,6 +144,42 @@ def main() -> None:
         castle_sec = out_html.split("Castle Age</span>")[1].split("</details>")[0]
         assert "Food Villagers Breakdown" not in dark_sec and "Total" not in dark_sec and ">Sheep " in dark_sec
         assert "Food Villagers Breakdown" in castle_sec and "Total" in castle_sec
+
+    # Verify all build generators produce villager ranges for multi-vil rows across all phases
+    # and end-of-range resource allocation counts matching the ending villager count.
+    builds_root = Path(__file__).resolve().parent.parent / "builds"
+    sys.path.insert(0, str(builds_root / "bohemians_arena_fc_hand_cannons"))
+    sys.path.insert(0, str(builds_root / "dravidian_maa_into_archers"))
+    sys.path.insert(0, str(builds_root / "italians_arena_fc_genoese"))
+    from generate_bohemians_arena_fc_hand_cannons import run_bohemians_1tc_fast_hc
+    from generate_dravidians_maa import run_dravidians_path
+    from generate_italians_arena_fc_genoese import run_italians_arena_strategy
+
+    generated_docs = [
+        run_bohemians_1tc_fast_hc(record_outputs=True)[0],
+        *(run_dravidians_path(pk, pk, record_outputs=True)[0] for pk in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram", "3tc_boom_ele_archer")),
+        *(run_italians_arena_strategy(st, record_outputs=True)[0] for st in ("1tc_push", "3tc_balanced")),
+    ]
+    for gdoc in generated_docs:
+        prev_v = 3
+        for idx, r in enumerate(gdoc.rows):
+            v_end = r.food_vils + r.wood_vils + r.gold_vils + r.stone_vils
+            m = re.match(r"^(\d+)(?:–(\d+))?\s*\(", r.pop)
+            assert m, f"Unexpected Vils/Pop format {r.pop!r} in {gdoc.name} row {idx}"
+            disp_start = int(m.group(1))
+            disp_end = int(m.group(2) or m.group(1))
+            assert disp_end == v_end, f"Allocation sum {v_end} != end vil {disp_end} in {gdoc.name} row {idx}"
+            if idx == 0:
+                assert disp_start == 3 and disp_end == v_end
+            elif v_end > prev_v + 1:
+                assert m.group(2) is not None and disp_start == prev_v + 1, (
+                    f"Expected range {prev_v + 1}–{v_end} in {gdoc.name} ({r.age}), got {r.pop!r}"
+                )
+            else:
+                assert m.group(2) is None and disp_start == v_end, (
+                    f"Unexpected range {r.pop!r} for delta={v_end - prev_v} in {gdoc.name} ({r.age})"
+                )
+            prev_v = v_end
 
     print("ALL RULES SYNC CHECKS PASSED")
 

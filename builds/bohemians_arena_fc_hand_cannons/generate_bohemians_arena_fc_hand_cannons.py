@@ -32,6 +32,7 @@ from exporters import (
     export_build_order_html,
     export_rts_overlay_json,
     format_army_counts,
+    format_vils_pop_range,
 )
 from sim_bohemians_arena_fc_hand_cannons import BohemiansArenaSimulator
 from simulator import run_late_command_checks
@@ -124,14 +125,30 @@ def run_bohemians_1tc_fast_hc(
             }
         )
 
+    last_logged_vils = 3
+    vil_spawn_pop: Dict[int, int] = {3: sim.total_pop()}
+
     def add_row(pop_str: str, time_str: str, phase: str, action: str, notes: str = "") -> None:
+        nonlocal last_logged_vils
         if not record_outputs:
             return
+        curr_vils = len(sim.vils)
+        curr_pop = sim.total_pop()
+        vil_spawn_pop[curr_vils] = curr_pop
+        pop_start = vil_spawn_pop.get(last_logged_vils, 4) if len(rows) == 0 else vil_spawn_pop.get(last_logged_vils + 1, curr_pop)
+        resolved_pop = format_vils_pop_range(
+            last_logged_vils,
+            curr_vils,
+            pop_start,
+            curr_pop,
+            include_start_vil=(len(rows) == 0),
+        )
+        last_logged_vils = curr_vils
         alloc = sim.current_macro_alloc()
         fb = sim.current_food_breakdown()
         rows.append(
             DetailedBuildRow(
-                pop=pop_str,
+                pop=resolved_pop,
                 timestamp=time_str,
                 age=phase,
                 action=action,
@@ -607,6 +624,7 @@ def run_bohemians_1tc_fast_hc(
                                     "busy_until": t + 15,
                                 }
                             )
+                    vil_spawn_pop[len(sim.vils)] = sim.total_pop()
 
                 elif act == "feudal":
                     sim.age = 2
@@ -942,6 +960,18 @@ def run_bohemians_1tc_fast_hc(
                         and sim.bank.can_afford(imp_cost)
                     )
                     if can_click_imp:
+                        if not fwd_loop_logged:
+                            fwd_loop_logged = True
+                            fwd_src_lbl = str(milestones.get("fwd_vils_src_str", "Wood/Farm"))
+                            fwd_disp_t = str(milestones.get("fwd_vils_dispatched_str", sim.fmt_time()))
+                            imp_prep_start_t = str(milestones.get("imp_prep_str", fwd_disp_t))
+                            add_row(
+                                "",
+                                f"{imp_prep_start_t} – {sim.fmt_time()}",
+                                "Castle Age",
+                                f"Send 8 Loom {fwd_src_lbl} vils forward at {fwd_disp_t} (60s walk)\n8 vils build Forward Castle (-650S, 60s) -> return to Wood\nKeep 7 vils on Stone (for extra Castles & repairs)\nAssign 3-TC Vils -> Farms / Wood / Gold to bank 1000F / 800G",
+                                f"Forward Castle ready {milestones.get('fwd_castle_ready_str', '')}; satisfies Imperial Age building req w/ University/SW (rule 4.6).",
+                            )
                         imp_clicked = True
                         imp_click_t = t
                         milestones["imp_click_s"] = t
@@ -1387,16 +1417,6 @@ def run_bohemians_1tc_fast_hc(
             ):
                 imp_prep_started = True
                 milestones["imp_prep_str"] = sim.fmt_time(t)
-                if not fwd_loop_logged:
-                    fwd_loop_logged = True
-                    fwd_src_lbl = str(milestones.get("fwd_vils_src_str", "Wood/Farm"))
-                    add_row(
-                        f"{len(sim.vils)} ({sim.total_pop()})",
-                        f"{milestones.get('fwd_vils_dispatched_str', sim.fmt_time())} – {sim.fmt_time()}",
-                        "Castle Age",
-                        f"Send 8 Loom {fwd_src_lbl} vils forward (60s walk)\n8 vils build Forward Castle (-650S, 60s) -> return to Wood\nKeep 7 vils on Stone (for extra Castles & repairs)\nAssign 3-TC Vils -> Farms / Wood / Gold to bank 1000F / 800G",
-                        f"Forward Castle ready {milestones.get('fwd_castle_ready_str', '')}; satisfies Imperial Age building req w/ University/SW (rule 4.6).",
-                    )
 
             # Trebuchets, extra Castles (from kept 7 Stone miners!) & Imperial Techs
             if sim.age == 4 and fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:

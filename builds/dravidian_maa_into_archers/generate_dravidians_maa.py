@@ -35,6 +35,7 @@ from exporters import (
     export_build_order_html,
     export_rts_overlay_json,
     format_army_counts,
+    format_vils_pop_range,
 )
 from sim_dravidians_maa import DravidiansSimulator
 from simulator import run_late_command_checks
@@ -129,14 +130,30 @@ def run_dravidians_path(
             }
         )
 
+    last_logged_vils = 3
+    vil_spawn_pop: Dict[int, int] = {3: sim.total_pop()}
+
     def add_row(pop_str: str, time_str: str, phase: str, action: str, notes: str = "") -> None:
+        nonlocal last_logged_vils
         if not record_outputs:
             return
+        curr_vils = len(sim.vils)
+        curr_pop = sim.total_pop()
+        vil_spawn_pop[curr_vils] = curr_pop
+        pop_start = vil_spawn_pop.get(last_logged_vils, 4) if len(rows) == 0 else vil_spawn_pop.get(last_logged_vils + 1, curr_pop)
+        resolved_pop = format_vils_pop_range(
+            last_logged_vils,
+            curr_vils,
+            pop_start,
+            curr_pop,
+            include_start_vil=(len(rows) == 0),
+        )
+        last_logged_vils = curr_vils
         alloc = sim.current_macro_alloc()
         fb = sim.current_food_breakdown()
         rows.append(
             DetailedBuildRow(
-                pop=pop_str,
+                pop=resolved_pop,
                 timestamp=time_str,
                 age=phase,
                 action=action,
@@ -476,6 +493,7 @@ def run_dravidians_path(
                             sim.vils.append({"id": vid, "role": "gold", "busy_until": t + 15})
                         else:
                             sim.vils.append({"id": vid, "role": "wood", "camp_idx": cur_camp, "busy_until": t + 15})
+                    vil_spawn_pop[len(sim.vils)] = sim.total_pop()
 
                 elif act == "loom":
                     loom_done = True
@@ -537,9 +555,10 @@ def run_dravidians_path(
                     milestones["imp_reached_str"] = sim.fmt_time()
                     milestones["imp_reached_vils"] = len(sim.vils)
                     milestones["imp_reached_army"] = current_army_dict()
+                    trans_start_t = max(imp_click_t or t, push_ready_t or 0) if (push_ready_t and imp_click_t and push_ready_t > imp_click_t) else (imp_click_t or t)
                     add_row(
-                        f"{len(sim.vils)} ({sim.total_pop()})",
-                        f"{sim.fmt_time(imp_click_t or t)} – {sim.fmt_time()}",
+                        "",
+                        f"{sim.fmt_time(trans_start_t)} – {sim.fmt_time()}",
                         "Imperial Transition",
                         "Continue military production & buildings\nResearch Ballistics / Thumb Ring / Hand Cart\nAdd extra TCs (as affordable)",
                         f"Imperial Transition (190s); arrives Imperial Age at {sim.fmt_time()} (<40:00 per rule 6.5; <500–1000 float).",
@@ -828,6 +847,20 @@ def run_dravidians_path(
                         sim.tc_busy_until[ti] = t + int(imp_time)
                         sim.tc_action[ti] = "imperial"
                         saving_for_imp = False
+                        army50_start = str(milestones.get("army50_str", sim.fmt_time()))
+                        imp_span = f"{army50_start} – {sim.fmt_time()}" if army50_start != sim.fmt_time() else sim.fmt_time()
+                        vil_cont_line = (
+                            "\nContinue 1-TC Vils -> Farms / Wood / Gold"
+                            if len(sim.vils) > last_logged_vils + 1
+                            else ""
+                        )
+                        add_row(
+                            "",
+                            imp_span,
+                            "Castle Age",
+                            f"Pause extra military queues to bank 1000F + 800G{vil_cont_line}\nBuild Siege Workshop & University if missing\nClick Imperial Age (-1000F, -800G, 190s)",
+                            f"50+ Army hit at {army50_start} (<40:00 goal; rule 6.5); army at click: {format_army_counts(current_army_dict())}.",
+                        )
                     elif ti == 0 and not hold_tc_for_imp and not hc_started and len(sim.vils) >= 48 and (path_key == "3tc_boom_ele_archer" or not saving_for_imp) and sim.bank.food >= (300 + 180 * sim.tc_count) and sim.bank.wood >= (200 + house_wood_res):
                         hc_started = True
                         sim.spend(ResourceBundle(food=300, wood=200), "HandCart")
@@ -896,10 +929,10 @@ def run_dravidians_path(
                         if not castle_loop1_logged:
                             castle_loop1_logged = True
                             add_row(
-                                f"{len(sim.vils)} ({sim.total_pop()})",
+                                "",
                                 f"{sim.fmt_time(castle_arrived_t)} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "1 Wood/Straggler vil builds Stable (-175W) -> Wood; train Light Cavalry\nResearch Heavy Plow (-125F, -125W)\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nWood/Straggler vils add Archery Ranges #3–#4 (-175W each) & Stable #2 (-175W)",
+                                "Continue 1-TC Vils -> Farms / Wood / Gold\n1 Wood/Straggler vil builds Stable (-175W) -> Wood; train Light Cavalry\nResearch Heavy Plow (-125F, -125W)\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nWood/Straggler vils add Archery Ranges #3–#4 (-175W each) & Stable #2 (-175W)",
                                 "1-TC Fast Army Ramp; prioritizes Ballistics at 20+ Xbows (rule 6.4).",
                             )
                     if sw_started and univ_started and not saving_for_imp and not ballistics_res_now:
@@ -942,10 +975,10 @@ def run_dravidians_path(
                         if not castle_loop1_logged:
                             castle_loop1_logged = True
                             add_row(
-                                f"{len(sim.vils)} ({sim.total_pop()})",
+                                "",
                                 f"{sim.fmt_time(castle_arrived_t)} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "1 Wood/Straggler vil builds Barracks #2 (-175W) -> Wood\nResearch Heavy Plow (-125F, -125W)\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nResearch Long Swordsman, Pikeman, Squires, Scale Mail, Forging & Leather Armor\nTrain Crossbowmen + Longswordsmen + Pikemen",
+                                "Continue 1-TC Vils -> Farms / Wood / Gold\n1 Wood/Straggler vil builds Barracks #2 (-175W) -> Wood\nResearch Heavy Plow (-125F, -125W)\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nResearch Long Swordsman, Pikeman, Squires, Scale Mail, Forging & Leather Armor\nTrain Crossbowmen + Longswordsmen + Pikemen",
                                 "Prioritizes Ballistics at 20+ Xbows (rule 6.4); -50% Barracks techs.",
                             )
                     if sw_started and univ_started and not saving_for_imp and not ballistics_res_now:
@@ -1007,11 +1040,12 @@ def run_dravidians_path(
                             milestones["sw_ready_str"] = sim.fmt_time(sw_ready[0] or t)
                             if not castle_loop2_logged:
                                 castle_loop2_logged = True
+                                milestones["castle_loop2_end_str"] = sim.fmt_time()
                                 add_row(
-                                    f"{len(sim.vils)} ({sim.total_pop()})",
+                                    "",
                                     f"{milestones['ele_switch_str']} – {sim.fmt_time()}",
                                     "Castle Age",
-                                    "Train Elephant Archers from Ranges\n1 Wood/Straggler vil builds Stable (-175W) -> Wood; train Light Cavalry\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nWood/Straggler vils add Archery Ranges & research Thumb Ring (-300F, -250W)",
+                                    "Continue 3-TC Vils -> Farms / Wood / Gold\nTrain Elephant Archers from Ranges\n1 Wood/Straggler vil builds Stable (-175W) -> Wood; train Light Cavalry\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-300W, -175G)\n1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nWood/Straggler vils add Archery Ranges & research Thumb Ring (-300F, -250W)",
                                     "Multi-Range Elephant Archers + Light Cav switch; Ballistics triggers at 20+ ranged per rule 6.4.",
                                 )
                         if sw_started and univ_started and not saving_for_imp and not ballistics_res_now and len(sim.vils) >= 58:
@@ -1028,13 +1062,6 @@ def run_dravidians_path(
                     milestones["army50_str"] = sim.fmt_time()
                     milestones["army50_vils"] = len(sim.vils)
                     milestones["army50_army"] = current_army_dict()
-                    add_row(
-                        f"{len(sim.vils)} ({sim.total_pop()})",
-                        sim.fmt_time(),
-                        "Castle Age",
-                        "Pause extra military queues to bank 1000F + 800G\nBuild Siege Workshop & University if missing\nClick Imperial Age (-1000F, -800G, 190s)",
-                        f"50+ Army hit (<40:00 goal; rule 6.5); army at shift: {format_army_counts(current_army_dict())}.",
-                    )
 
                 if imp_clicked or sim.age == 4:
                     if count_built(sw_ready) < 2 and sim.bank.wood >= (450 + house_wood_res):
@@ -1149,11 +1176,21 @@ def run_dravidians_path(
                         milestones["push_ready_str"] = sim.fmt_time()
                         milestones["push_ready_vils"] = len(sim.vils)
                         milestones["push_ready_army"] = current_army_dict()
+                        push_span = (
+                            f"{milestones['castle_loop2_end_str']} – {sim.fmt_time()}"
+                            if (current_phase == "Castle Age" and "castle_loop2_end_str" in milestones)
+                            else sim.fmt_time()
+                        )
+                        push_vil_line = (
+                            f"Continue 3-TC Vils (to {len(sim.vils)} vils) -> Farms / Wood / Gold\n"
+                            if len(sim.vils) > last_logged_vils + 1
+                            else ""
+                        )
                         add_row(
-                            f"{len(sim.vils)} ({sim.total_pop()})",
-                            sim.fmt_time(),
+                            "",
+                            push_span,
                             current_phase,
-                            "1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nTrain 3 Armored Elephants (-120F, -95G each)",
+                            f"{push_vil_line}1 Wood/Straggler vil builds Siege Workshop (-200W) -> Wood\nTrain 3 Armored Elephants (-120F, -95G each)",
                             f"Push with upgraded army; push force: {format_army_counts(current_army_dict())}.",
                         )
 

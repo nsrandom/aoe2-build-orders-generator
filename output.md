@@ -65,7 +65,7 @@ Every phase table dynamically omits any food sub-source (`Sheep`, `Boar`, `Deer`
 
 | Column Group | Column Header | Format & Meaning |
 | :--- | :--- | :--- |
-| **1. Vils/Pop** | `Vils/Pop` | Villager count (or compressed range) followed by total population in parentheses without `v` or `pop` suffixes: e.g., `23 (24)` or `4–6 (5–7)`. |
+| **1. Vils/Pop** | `Vils/Pop` | Villager count (or range `V_start–V_end` across **all phases** whenever a row allocates multiple villagers) followed by total population in parentheses without `v` or `pop` suffixes: e.g., `23 (24)`, `4–6 (5–7)`, or `23–34 (24–42)`. |
 | **2. Timestamp** | `Time` | Exact simulation timestamp `MM:SS` (or compressed span `00:25 – 01:15`). |
 | **3. Action** | `Villager Assignment / Action` | Action taken at that step, including walk times, building/tech resource deductions (`-100W`, `-150F, -50G`), and build/research durations. |
 | **4–9. Food Villagers** | If `>= 2` sources: active sub-sources (`Sheep`, `Boar`, `Deer`/`Chickens`/`Deer/Chk`, `Berries`, `Farms`) \| `Total`. If `1` source: single source column (no `Total`). | Exact active villager count on each non-zero food source at the end of the step. With `>= 2` active sources in the phase, includes bold `Total`; with only `1` active source, omits `Total` and renders that source directly; `0`-vil food sub-columns are omitted. |
@@ -89,6 +89,7 @@ To keep build order tables human-memorable and scannable in-game, **only the fir
      - **`Notes, Buildings & Army`:** Concatenate unique non-empty notes from the merged rows preceded by the end-of-group `Army:` badge.
 2. **High-Level Macro Phases (Feudal+ for non-FC builds; Castle+ for FC builds):**
    - In Feudal Age and beyond (non-FC builds) and Castle Age and beyond (FC builds), combine repetitive villager spawns, farm placements (`every 60W`), houses, and continuous unit queues into **concise high-level macro priority blocks** with clear stopping criteria (e.g., `"Make vils continuously -> new vils to stragglers & seed Farms every 60W (up to 16 Farms), while producing Archers from 1 Range + Fletching, until clicking Castle Age (800F, 200G)"`).
+   - Whenever a macro block allocates multiple villagers (e.g., from 23 to 34 vils), display the villager range in `Vils/Pop` (`23–34 (Pop_start–Pop_end)`) and display the **end-of-range** Food/Wood/Gold/Stone villager counts (for all 34 vils at the end of the block).
    - Do **not** list 20+ individual `Queue Archer #N` or `Build Farm #N` rows in Feudal/Castle Age; summarize each distinct macro phase as a milestone-bounded block while still sampling `resource_timeline` every 10s from the underlying 1-second simulation.
 3. **Preventing Artificial Row Splits:**
    - Do not insert standalone informational rows (such as mid-hunt Boar #2 lure reminders or redundant `"Queue Unit #1"` logs) in the middle of a continuous villager run. Fold timing reminders into the `Notes, Buildings & Army` column of the corresponding villager row.
