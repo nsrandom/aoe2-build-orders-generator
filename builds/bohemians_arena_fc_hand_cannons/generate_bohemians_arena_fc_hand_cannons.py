@@ -74,7 +74,7 @@ def run_bohemians_1tc_fast_hc(
         return planned_t if delay_fn is None else delay_fn(planned_t)
 
     variant_label = (
-        "24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp"
+        "24+2 1-TC Fast Hand Cannons -> 3-TC Boom, Houfnices, Light Cav, Halbs & ~800S Castles"
     )
 
     rows: List[DetailedBuildRow] = []
@@ -92,9 +92,12 @@ def run_bohemians_1tc_fast_hc(
             if "halberdier" in sim.upgrades
             else ("pikeman" if "pikeman" in sim.upgrades else "spearman")
         )
+        bbc_key = "houfnice" if "houfnice" in sim.upgrades else "bombard_cannon"
         out: Dict[str, int] = {"scout": sim.military_units["scout"]}
         if sim.military_units["hand_cannoneer"] > 0:
             out["hand_cannoneer"] = sim.military_units["hand_cannoneer"]
+        if sim.military_units["light_cav"] > 0:
+            out["light_cav"] = sim.military_units["light_cav"]
         if sim.military_units["mangonel"] > 0:
             out["mangonel"] = sim.military_units["mangonel"]
         if sim.military_units["battering_ram"] > 0:
@@ -105,6 +108,8 @@ def run_bohemians_1tc_fast_hc(
             out["monk"] = sim.military_units["monk"]
         if sim.military_units["trebuchet"] > 0:
             out["trebuchet"] = sim.military_units["trebuchet"]
+        if sim.military_units["bombard_cannon"] > 0:
+            out[bbc_key] = sim.military_units["bombard_cannon"]
         return out
 
     def record_timeline_point() -> None:
@@ -232,17 +237,30 @@ def run_bohemians_1tc_fast_hc(
 
     barracks_started = False
     barracks_ready_t: Optional[int] = None
-    rax_busy_until = 0
+    barracks_ready_times: List[int] = []
+    rax_busy_until: List[int] = [0, 0, 0]
     pikeman_upg_started = False
+    squires_started = False
     halberdier_upg_started = False
 
     ranges_started = 0
     range_ready_times: List[int] = []
-    range_busy_until: List[int] = [0, 0, 0]
+    range_busy_until: List[int] = [0, 0, 0, 0, 0]
+
+    stables_started = 0
+    stable_ready_times: List[int] = []
+    stable_busy_until: List[int] = [0, 0, 0]
+    light_cav_upg_started = False
+    light_cav_converted = False
+    husbandry_started = False
 
     sw_started = False
     sw_ready_t: Optional[int] = None
-    sw_busy_until = 0
+    sw_ready_times: List[int] = []
+    sw_busy_until: List[int] = [0, 0]
+    houfnice_started = False
+    houfnice_ready_t: Optional[int] = None
+    houfnice_logged = False
 
     monastery_started = False
     monastery_ready_t: Optional[int] = None
@@ -250,9 +268,23 @@ def run_bohemians_1tc_fast_hc(
     monks_trained = 0
     relic1_time: Optional[int] = None
 
+    bs_busy_until = 0
     padded_armor_started = False
     leather_armor_started = False
     ring_armor_started = False
+    forging_started = False
+    iron_casting_started = False
+    blast_furnace_started = False
+    scale_mail_started = False
+    chain_mail_started = False
+    plate_mail_started = False
+    scale_barding_started = False
+    chain_barding_started = False
+
+    heavy_plow_started = False
+    two_man_saw_started = False
+    fervor_started = False
+    sanctity_started = False
 
     stone_ramp_started = False
     fwd_vils_dispatched = False
@@ -308,7 +340,7 @@ def run_bohemians_1tc_fast_hc(
             return True
         return False
 
-    max_sim_t = 2800
+    max_sim_t = 3200
     for t in range(1, max_sim_t + 1):
         sim.time_s = t
         sim.in_age_transition = (
@@ -576,15 +608,15 @@ def run_bohemians_1tc_fast_hc(
                             or (first_hc_t is not None and ranges_started >= 2 and not sw_started and sim.bank.wood < 200)
                             or (ranges_started >= 3 and sw_started and not tc3_started and sim.bank.wood < 275)
                         )
-                        farm_t1 = 15 if first_hc_t is None else (34 if not imp_clicked else 48)
-                        wood_t1 = 14 if first_hc_t is None else (20 if not imp_clicked else 26)
+                        farm_t1 = 15 if first_hc_t is None else (34 if not imp_clicked else 52)
+                        wood_t1 = 14 if first_hc_t is None else (20 if not imp_clicked else 36)
                         # Keep Gold miners tight so we don't float Gold!
                         if first_hc_t is None:
                             gold_t1 = 4 if sim.bank.gold < 320 else 3
                         elif not imp_clicked:
                             gold_t1 = 6 if sim.bank.gold > 500 else (10 if not imp_prep_started else 14)
                         else:
-                            gold_t1 = 20
+                            gold_t1 = 29
 
                         need_castle_stone = 660 if not tc2_started else (760 if not tc3_started else 660)
                         stone_t = 7 if (stone_ramp_started and not fwd_castle_started and sim.bank.stone < need_castle_stone) else 0
@@ -734,7 +766,7 @@ def run_bohemians_1tc_fast_hc(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(imp_click_t)} – {sim.fmt_time()}",
                         "Imperial Transition",
-                        "Continue 3-TC Vils -> Farms / Wood / Gold\nContinue 3-Range Hand Cannoneers + Mangonels + Pikemen\nFinish Forward Castle (-650S)",
+                        "Continue 3-TC Vils (toward 120–130 vils) -> Farms / Wood / Gold\nResearch Hand Cart (-300F, -200W), Heavy Plow (-125F, -125W), Fervor (-140G) & Sanctity (-175G)\nAdd Barracks #2–#3 (-175W each), Stables #1–#2 (-175W each), Range #4 (-175W) & Siege Workshop #2 (-200W)\nResearch Light Cavalry (-150F, -50G), Husbandry (-150F), Squires (-100F) & Blacksmith melee/cavalry upgrades\nBuild Castle #2 (-650S) at ~800 Stone (and another Castle every time Stone reaches ~800S)",
                         f"Imperial Transition (190s): Arrives Imperial Age at {sim.fmt_time()} (target <40:00 per rule 6.5).",
                     )
 
@@ -742,12 +774,13 @@ def run_bohemians_1tc_fast_hc(
                         conscription_started = True
                         sim.spend(ResourceBundle(food=150, gold=150), "Conscription")
                         sim.queue_upgrade("conscription", t + 60)
+                        castle_busy_until = max(castle_busy_until, t + 60)
 
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         sim.fmt_time(),
                         "Imperial Age",
-                        "Research Conscription (-150F, -150G)\nResearch Ring Archer Armor (-250F, -250G)\nResearch Halberdier (-300F, -600G)\nResearch Siege Engineers (-500F, -600W)\nResearch Wagenburg Tactics (-300F, -300G)\nTrain Trebuchets (-200W, -200G) from Forward Castle",
+                        "Research Conscription (-150F, -150G), Two-Man Saw (-300F, -200W) & Siege Engineers (-500F, -600W)\nResearch Ring Archer Armor (-250F, -250G), Halberdier (-300F, -600G) & Wagenburg Tactics (-300F, -300G)\nTrain Bombard Cannons (-225W, -225G) from 2 Siege Workshops + Trebuchets (-200W, -200G) from Castles",
                         f"Reached Imperial Age; bank on arrival: {sim.bank.food:.0f}F / {sim.bank.wood:.0f}W / {sim.bank.gold:.0f}G / {sim.bank.stone:.0f}S.",
                     )
 
@@ -1005,7 +1038,7 @@ def run_bohemians_1tc_fast_hc(
                         sim.tc_busy_until[0] = t + 55
                         sim.tc_action[0] = "hand_cart"
                     else:
-                        max_vils_cap = 110 if not imp_clicked else 108
+                        max_vils_cap = 124
                         in_flight_vils = sum(1 for a in sim.tc_action if a.startswith("vil_"))
                         want_hold_imp = (
                             tc_idx == 0
@@ -1049,6 +1082,7 @@ def run_bohemians_1tc_fast_hc(
                 barracks_started = True
                 sim.spend(ResourceBundle(wood=175), "Barracks")
                 barracks_ready_t = t + 10 + 50
+                barracks_ready_times.append(barracks_ready_t)
                 sim.add_building("barracks", barracks_ready_t)
                 _pull_builders(sim, ("wood", "farm"), 1, barracks_ready_t + 10)
 
@@ -1080,31 +1114,70 @@ def run_bohemians_1tc_fast_hc(
                 if monks_trained == 2:
                     milestones["monks2_done_str"] = sim.fmt_time(t + 51)
 
-            # Range #1 builds ASAP; Ranges #2 & #3 delay until Monastery is placed & 1-Range HC production has started!
-            if barracks_ready_t is not None and t >= barracks_ready_t:
-                want_range = (ranges_started == 0) or (ranges_started < 3 and first_hc_t is not None and monastery_started)
-                if want_range and sim.bank.wood >= (175 + house_wood_res + (175 if (ranges_started >= 1 and not monastery_started) else 0)):
-                    ranges_started += 1
-                    sim.spend(ResourceBundle(wood=175), f"Range{ranges_started}")
-                    r_ready = t + 10 + 50
-                    range_ready_times.append(r_ready)
-                    sim.add_building("archery range", r_ready)
-                    _pull_builders(sim, ("wood", "farm"), 1, r_ready + 10)
-                    if ranges_started == 1:
-                        milestones["range1_ready_str"] = sim.fmt_time(r_ready)
-                    if ranges_started == 2:
-                        milestones["range2_ready_str"] = sim.fmt_time(r_ready)
-                    if ranges_started == 3:
-                        milestones["ranges3_ready_str"] = sim.fmt_time(r_ready)
+            # Monastery eco techs (Fervor +15% vil speed, Sanctity +15 vil HP) once Imperial clicked
+            if imp_clicked and monastery_ready_t is not None and t >= monastery_ready_t and monks_trained >= 2 and t >= monastery_busy_until:
+                if not fervor_started and queue_upg("fervor"):
+                    fervor_started = True
+                    monastery_busy_until = t + 50
+                elif fervor_started and not sanctity_started and queue_upg("sanctity"):
+                    sanctity_started = True
+                    monastery_busy_until = t + 60
 
-            # Siege Workshop builds once Range #2 is started (or right alongside Range #3) after first HC!
+            # Range #1 builds ASAP; Ranges #2 & #3 delay until Monastery is placed & 1-Range HC production has started;
+            # Ranges #4-#5, Barracks #2-#3, Stables #1-#3, and Siege Workshop #2 scale after clicking Imperial!
+            if barracks_ready_t is not None and t >= barracks_ready_t:
+                max_ranges = 5 if imp_clicked else 3
+                want_range = (ranges_started == 0) or (ranges_started < max_ranges and first_hc_t is not None and monastery_started)
+                if want_range and sim.bank.wood >= (175 + house_wood_res + (175 if (ranges_started >= 1 and not monastery_started) else 0)):
+                    if ranges_started < 3 or (stables_started >= 2 and len(sw_ready_times) >= 2 and len(barracks_ready_times) >= 2):
+                        ranges_started += 1
+                        sim.spend(ResourceBundle(wood=175), f"Range{ranges_started}")
+                        r_ready = t + 10 + 50
+                        range_ready_times.append(r_ready)
+                        sim.add_building("archery range", r_ready)
+                        _pull_builders(sim, ("wood", "farm"), 1, r_ready + 10)
+                        if ranges_started == 1:
+                            milestones["range1_ready_str"] = sim.fmt_time(r_ready)
+                        if ranges_started == 2:
+                            milestones["range2_ready_str"] = sim.fmt_time(r_ready)
+                        if ranges_started == 3:
+                            milestones["ranges3_ready_str"] = sim.fmt_time(r_ready)
+
+            # Siege Workshop #1 in Castle; Siege Workshop #2 after Imperial click
             if first_hc_t is not None and ranges_started >= 2 and not sw_started and sim.bank.wood >= (200 + house_wood_res):
                 sw_started = True
-                sim.spend(ResourceBundle(wood=200), "SiegeWorkshop")
+                sim.spend(ResourceBundle(wood=200), "SiegeWorkshop1")
                 sw_ready_t = t + 10 + 40
+                sw_ready_times.append(sw_ready_t)
                 sim.add_building("siege workshop", sw_ready_t)
                 _pull_builders(sim, ("wood", "farm"), 1, sw_ready_t + 10)
                 milestones["sw_ready_str"] = sim.fmt_time(sw_ready_t)
+
+            if imp_clicked and len(sw_ready_times) < 2 and sim.bank.wood >= (200 + house_wood_res):
+                sim.spend(ResourceBundle(wood=200), "SiegeWorkshop2")
+                sw2_ready = t + 10 + 40
+                sw_ready_times.append(sw2_ready)
+                sim.add_building("siege workshop", sw2_ready)
+                _pull_builders(sim, ("wood", "farm"), 1, sw2_ready + 10)
+
+            # Stables #1-#3 & Barracks #2-#3 after Imperial click
+            if imp_clicked:
+                max_stables = 3 if sim.age == 4 else 2
+                if stables_started < max_stables and sim.bank.wood >= (175 + house_wood_res):
+                    stables_started += 1
+                    sim.spend(ResourceBundle(wood=175), f"Stable{stables_started}")
+                    st_ready = t + 10 + 50
+                    stable_ready_times.append(st_ready)
+                    sim.add_building("stable", st_ready)
+                    _pull_builders(sim, ("wood", "farm"), 1, st_ready + 10)
+
+                max_barracks = 3
+                if len(barracks_ready_times) < max_barracks and stables_started >= 1 and sim.bank.wood >= (175 + house_wood_res):
+                    sim.spend(ResourceBundle(wood=175), f"Barracks{len(barracks_ready_times)+1}")
+                    b_ready = t + 10 + 50
+                    barracks_ready_times.append(b_ready)
+                    sim.add_building("barracks", b_ready)
+                    _pull_builders(sim, ("wood", "farm"), 1, b_ready + 10)
 
             # Pre-Stone milestone row at Vil #46 (explains allocations right before moving Wood vils to Stone!)
             if (
@@ -1203,10 +1276,12 @@ def run_bohemians_1tc_fast_hc(
                 bldg_w_res = 275 if (f_cnt_now >= 15 and w_cnt_now < 20) else 0
             elif sim.age == 4 and not siege_engineers_started:
                 bldg_w_res = 600
+            elif imp_clicked and (stables_started < 2 or len(barracks_ready_times) < 3 or len(sw_ready_times) < 2 or ranges_started < 5):
+                bldg_w_res = 200
             else:
                 bldg_w_res = 0
-            farm_cap_now = 15 if first_hc_t is None else (36 if not imp_clicked else 46)
-            min_w_keep = 8 if first_hc_t is None else 12
+            farm_cap_now = 15 if first_hc_t is None else (36 if not imp_clicked else 50)
+            min_w_keep = 8 if first_hc_t is None else (12 if not imp_clicked else 20)
             can_seed_farms = bow_saw_started and f_cnt_now < farm_cap_now and w_cnt_now > min_w_keep
             if can_seed_farms and sim.bank.food < 1100 and sim.bank.wood >= (60 + house_wood_res + bldg_w_res):
                 for v in sim.vils:
@@ -1234,33 +1309,93 @@ def run_bohemians_1tc_fast_hc(
                     f"Bohemians save 100W on University; Chemistry finishes at {sim.fmt_time()} for immediate 1-Range Hand Cannoneers.",
                 )
 
-            # Upgrades at Blacksmith & Barracks
-            if not padded_armor_started and chemistry_started and queue_upg("padded archer armor", res_food=60 * sim.tc_count + 40):
-                padded_armor_started = True
-            if padded_armor_started and "padded archer armor" in sim.upgrades and not leather_armor_started and queue_upg("leather archer armor", res_food=60 * sim.tc_count + 40, res_gold=100):
-                leather_armor_started = True
-            if sim.age == 4 and leather_armor_started and "leather archer armor" in sim.upgrades and not ring_armor_started and queue_upg("ring archer armor", res_food=60 * sim.tc_count + 40, res_gold=150):
-                ring_armor_started = True
+            # Upgrades at Mill, Lumber Camp, Blacksmith, Barracks, and Stables
+            saving_for_houfnice = (
+                sim.age == 4
+                and not houfnice_started
+                and sim.military_units["bombard_cannon"] >= 5
+                and len(sim.vils) >= 100
+            )
+            if imp_clicked and not heavy_plow_started and queue_upg("heavy plow", res_food=60 * sim.tc_count):
+                heavy_plow_started = True
+            if sim.age == 4 and not two_man_saw_started and queue_upg("two-man saw", res_food=60 * sim.tc_count, res_wood=house_wood_res):
+                two_man_saw_started = True
 
-            if barracks_ready_t is not None and t >= barracks_ready_t and t >= rax_busy_until:
+            if t >= bs_busy_until:
+                if not padded_armor_started and chemistry_started and queue_upg("padded archer armor", res_food=60 * sim.tc_count + 40):
+                    padded_armor_started = True
+                    bs_busy_until = t + 40
+                elif padded_armor_started and "padded archer armor" in sim.upgrades and not leather_armor_started and queue_upg("leather archer armor", res_food=60 * sim.tc_count + 40, res_gold=100):
+                    leather_armor_started = True
+                    bs_busy_until = t + 55
+                elif sim.age == 4 and leather_armor_started and "leather archer armor" in sim.upgrades and not ring_armor_started and queue_upg("ring archer armor", res_food=60 * sim.tc_count + 40, res_gold=150):
+                    ring_armor_started = True
+                    bs_busy_until = t + 70
+                elif imp_clicked and not forging_started and queue_upg("forging", res_food=60 * sim.tc_count):
+                    forging_started = True
+                    bs_busy_until = t + 50
+                elif imp_clicked and forging_started and "forging" in sim.upgrades and not scale_mail_started and queue_upg("scale mail armor", res_food=60 * sim.tc_count):
+                    scale_mail_started = True
+                    bs_busy_until = t + 40
+                elif imp_clicked and scale_mail_started and "scale mail armor" in sim.upgrades and not scale_barding_started and queue_upg("scale barding armor", res_food=60 * sim.tc_count):
+                    scale_barding_started = True
+                    bs_busy_until = t + 45
+                elif imp_clicked and scale_barding_started and "scale barding armor" in sim.upgrades and not chain_mail_started and queue_upg("chain mail armor", res_food=60 * sim.tc_count):
+                    chain_mail_started = True
+                    bs_busy_until = t + 55
+                elif imp_clicked and chain_mail_started and "chain mail armor" in sim.upgrades and not iron_casting_started and not saving_for_houfnice and queue_upg("iron casting", res_food=60 * sim.tc_count):
+                    iron_casting_started = True
+                    bs_busy_until = t + 75
+                elif sim.age == 4 and "chain mail armor" in sim.upgrades and not plate_mail_started and not saving_for_houfnice and queue_upg("plate mail armor", res_food=60 * sim.tc_count):
+                    plate_mail_started = True
+                    bs_busy_until = t + 70
+                elif sim.age == 4 and "scale barding armor" in sim.upgrades and not chain_barding_started and not saving_for_houfnice and queue_upg("chain barding armor", res_food=60 * sim.tc_count):
+                    chain_barding_started = True
+                    bs_busy_until = t + 60
+                elif sim.age == 4 and "iron casting" in sim.upgrades and not blast_furnace_started and not saving_for_houfnice and queue_upg("blast furnace", res_food=60 * sim.tc_count):
+                    blast_furnace_started = True
+                    bs_busy_until = t + 100
+
+            if barracks_ready_t is not None and t >= barracks_ready_t and t >= rax_busy_until[0]:
                 if not pikeman_upg_started and first_hc_t is not None and sim.bank.food >= (160 + 60 * sim.tc_count) and sim.bank.gold >= 90:
                     pikeman_upg_started = True
                     sim.spend(ResourceBundle(food=160, gold=90), "PikemanUpg")
                     sim.queue_upgrade("pikeman", t + 45)
-                    rax_busy_until = t + 45
-                elif sim.age == 4 and "pikeman" in sim.upgrades and not halberdier_upg_started and sim.bank.food >= 520 and sim.bank.gold >= 600:
+                    rax_busy_until[0] = t + 45
+                elif imp_clicked and "pikeman" in sim.upgrades and not squires_started and queue_upg("squires", res_food=60 * sim.tc_count):
+                    squires_started = True
+                    rax_busy_until[0] = t + 25
+                elif sim.age == 4 and "pikeman" in sim.upgrades and not halberdier_upg_started and sim.bank.food >= 420 and sim.bank.gold >= 600:
                     halberdier_upg_started = True
                     sim.spend(ResourceBundle(food=300, gold=600), "HalberdierUpg")
                     sim.queue_upgrade("halberdier", t + 50)
-                    rax_busy_until = t + 50
+                    rax_busy_until[0] = t + 50
+
+            if stable_ready_times and t >= stable_ready_times[0] and t >= stable_busy_until[0]:
+                if not light_cav_upg_started and queue_upg("light cavalry", res_food=60 * sim.tc_count):
+                    light_cav_upg_started = True
+                    stable_busy_until[0] = t + 45
+                elif light_cav_upg_started and "light cavalry" in sim.upgrades and not husbandry_started and queue_upg("husbandry", res_food=60 * sim.tc_count):
+                    husbandry_started = True
+                    stable_busy_until[0] = t + 40
+
+            if not light_cav_converted and "light cavalry" in sim.upgrades:
+                light_cav_converted = True
+                if sim.military_units["scout"] > 0:
+                    sim.military_units["scout"] -= 1
+                    sim.military_units["light_cav"] += 1
 
             saving_for_imp = imp_prep_started and not imp_clicked
             tc_food_res = 75 * sim.tc_count
             monk_g_res = 100 if (monastery_ready_t is not None and t >= monastery_ready_t and first_hc_t is not None and monks_trained < 2 and t >= monastery_busy_until - 10) else 0
+            houf_f_res = 1100 if saving_for_houfnice else 0
+            houf_g_res = 800 if saving_for_houfnice else 0
 
-            # Hand Cannoneers continuously from all active Ranges!
+            # Hand Cannoneers from active Ranges (cap 32 in Castle, 36 in Imp; leave pop room for 124 vils + 6 Bombards/Houfnices + Light Cav + Halbs)
             hc_train_s = 25 if "conscription" in sim.upgrades else 34
-            hc_cap = 60
+            hc_cap = 32 if not imp_clicked else 36
+            bbc_target = 6
+            bbc_pop_res = max(0, bbc_target - sim.military_units["bombard_cannon"]) if (imp_clicked or sim.age == 4) else 0
             if "chemistry" in sim.upgrades:
                 for idx, r_ready in enumerate(range_ready_times):
                     if (
@@ -1268,73 +1403,92 @@ def run_bohemians_1tc_fast_hc(
                         and t >= range_busy_until[idx]
                         and not (saving_for_imp and (sim.bank.food < imp_cost.food + 45 or sim.bank.gold < imp_cost.gold + 50))
                         and sim.free_pop() >= 1
-                        and sim.total_pop() < 195
-                        and sim.bank.food >= (45 + tc_food_res)
-                        and sim.bank.gold >= (50 + monk_g_res)
+                        and sim.total_pop() < (200 - bbc_pop_res)
+                        and sim.military_units["hand_cannoneer"] < hc_cap
+                        and sim.bank.food >= (45 + tc_food_res + (houf_f_res if sim.military_units["hand_cannoneer"] >= 32 else 0))
+                        and sim.bank.gold >= (50 + monk_g_res + (houf_g_res if sim.military_units["hand_cannoneer"] >= 32 else 0))
                     ):
                         sim.spend(ResourceBundle(food=45, gold=50), "HandCannoneer")
                         range_busy_until[idx] = t + hc_train_s
+                        sim.military_units["hand_cannoneer"] += 1
                         if first_hc_t is None:
                             first_hc_t = t
                             milestones["first_hc_str"] = sim.fmt_time(t)
-                        if sim.military_units["hand_cannoneer"] >= hc_cap or sim.total_pop() >= 194:
-                            sim.casualties["hand_cannoneer"] += 1
-                        else:
-                            sim.military_units["hand_cannoneer"] += 1
 
-            # Mangonels & optional Battering Rams from Siege Workshop
-            mang_target = (2 if (not tc3_started or castle_rams > 0) else 3) if sim.age == 3 else 6
-            if (
-                sw_ready_t is not None
-                and t >= sw_ready_t
-                and t >= sw_busy_until
-                and "chemistry" in sim.upgrades
-                and not saving_for_imp
-                and sim.free_pop() >= 1
-                and sim.total_pop() < 195
-            ):
+            # Mangonels (Castle), Bombard Cannons & Houfnice upgrade (Imperial) from 2 Siege Workshops
+            mang_target = 2
+            for sw_idx, sw_r in enumerate(sw_ready_times):
+                if t >= sw_r and t >= sw_busy_until[sw_idx] and "chemistry" in sim.upgrades and not saving_for_imp:
+                    if (
+                        sim.age == 4
+                        and sw_idx == 0
+                        and not houfnice_started
+                        and sim.military_units["bombard_cannon"] >= 5
+                        and len(sim.vils) >= 100
+                        and queue_upg("houfnice")
+                    ):
+                        houfnice_started = True
+                        houfnice_ready_t = t + 140
+                        sw_busy_until[sw_idx] = houfnice_ready_t
+                        milestones["houfnice_started_str"] = sim.fmt_time(t)
+                        milestones["houfnice_done_str"] = sim.fmt_time(houfnice_ready_t)
+                    elif (
+                        sim.age == 4
+                        and sim.military_units["bombard_cannon"] < bbc_target
+                        and sim.free_pop() >= 1
+                        and sim.total_pop() < 200
+                        and sim.bank.wood >= (225 + house_wood_res)
+                        and sim.bank.gold >= (225 + (houf_g_res if sim.military_units["bombard_cannon"] >= 5 else 0))
+                    ):
+                        sim.spend(ResourceBundle(wood=225, gold=225), "BombardCannon")
+                        sw_busy_until[sw_idx] = t + (42 if "conscription" in sim.upgrades else 56)
+                        sim.military_units["bombard_cannon"] += 1
+                    elif (
+                        sim.age == 3
+                        and sim.military_units["mangonel"] < mang_target
+                        and sim.free_pop() >= 1
+                        and sim.total_pop() < 195
+                        and sim.bank.wood >= (160 + house_wood_res)
+                        and sim.bank.gold >= (135 + monk_g_res)
+                    ):
+                        sim.spend(ResourceBundle(wood=160, gold=135), "Mangonel")
+                        sw_busy_until[sw_idx] = t + 46
+                        sim.military_units["mangonel"] += 1
+
+            # Light Cavalry from Stables (once Light Cavalry upgrade completes)
+            lcav_target = 12
+            lcav_train_s = 23 if "conscription" in sim.upgrades else 30
+            if "light cavalry" in sim.upgrades:
+                for st_idx, st_r in enumerate(stable_ready_times):
+                    if (
+                        t >= st_r
+                        and t >= stable_busy_until[st_idx]
+                        and sim.military_units["light_cav"] < lcav_target
+                        and sim.free_pop() >= 1
+                        and sim.total_pop() < (200 - bbc_pop_res)
+                        and sim.bank.food >= (80 + tc_food_res + houf_f_res)
+                    ):
+                        sim.spend(ResourceBundle(food=80), "LightCav")
+                        stable_busy_until[st_idx] = t + lcav_train_s
+                        sim.military_units["light_cav"] += 1
+
+            # Pikemen / Halberdiers from Barracks (#1-#3)
+            pike_target = 8 if not imp_clicked else 16
+            for b_idx, b_r in enumerate(barracks_ready_times):
                 if (
-                    sim.military_units["mangonel"] < 2
-                    and sim.bank.wood >= (160 + house_wood_res)
-                    and sim.bank.gold >= (135 + monk_g_res)
+                    t >= b_r
+                    and t >= rax_busy_until[b_idx]
+                    and "pikeman" in sim.upgrades
+                    and sim.military_units["pikeman"] < pike_target
+                    and not (saving_for_imp and sim.bank.food < imp_cost.food + 35)
+                    and sim.free_pop() >= 1
+                    and sim.total_pop() < (200 - bbc_pop_res)
+                    and sim.bank.food >= (35 + tc_food_res + (houf_f_res if sim.military_units["pikeman"] >= 10 else 0))
+                    and sim.bank.wood >= (25 + house_wood_res)
                 ):
-                    sim.spend(ResourceBundle(wood=160, gold=135), "Mangonel")
-                    sw_busy_until = t + 46
-                    sim.military_units["mangonel"] += 1
-                elif (
-                    sim.military_units["battering_ram"] < castle_rams
-                    and sim.bank.wood >= (160 + house_wood_res + (275 if not tc3_started else 0))
-                    and sim.bank.gold >= (75 + monk_g_res)
-                ):
-                    sim.spend(ResourceBundle(wood=160, gold=75), "BatteringRam")
-                    sw_busy_until = t + 36
-                    sim.military_units["battering_ram"] += 1
-                elif (
-                    sim.military_units["mangonel"] < mang_target
-                    and sim.bank.wood >= (160 + house_wood_res + (275 if not tc3_started else 0))
-                    and sim.bank.gold >= (135 + monk_g_res)
-                ):
-                    sim.spend(ResourceBundle(wood=160, gold=135), "Mangonel")
-                    sw_busy_until = t + 46
-                    sim.military_units["mangonel"] += 1
-
-            # A few Pikemen (~8-10 in Castle, 12-16 Halbs in Imp)
-            pike_target = 8 if sim.age == 3 else 14
-            if (
-                barracks_ready_t is not None
-                and t >= barracks_ready_t
-                and t >= rax_busy_until
-                and "pikeman" in sim.upgrades
-                and sim.military_units["pikeman"] < pike_target
-                and not (saving_for_imp and sim.bank.food < imp_cost.food + 35)
-                and sim.free_pop() >= 1
-                and sim.total_pop() < 195
-                and sim.bank.food >= (35 + tc_food_res)
-                and sim.bank.wood >= (25 + house_wood_res)
-            ):
-                sim.spend(ResourceBundle(food=35, wood=25), "Pikeman")
-                rax_busy_until = t + (17 if "conscription" in sim.upgrades else 22)
-                sim.military_units["pikeman"] += 1
+                    sim.spend(ResourceBundle(food=35, wood=25), "Pikeman")
+                    rax_busy_until[b_idx] = t + (17 if "conscription" in sim.upgrades else 22)
+                    sim.military_units["pikeman"] += 1
 
             if not mil_loop_logged and stone_ramp_started and ranges_started >= 3 and sw_started and sim.military_units["mangonel"] >= 2:
                 mil_loop_logged = True
@@ -1418,35 +1572,37 @@ def run_bohemians_1tc_fast_hc(
                 imp_prep_started = True
                 milestones["imp_prep_str"] = sim.fmt_time(t)
 
-            # Trebuchets, extra Castles (from kept 7 Stone miners!) & Imperial Techs
-            if sim.age == 4 and fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
-                if (
-                    extra_castles_started < 2
-                    and (extra_castle_ready_t is None or t >= extra_castle_ready_t)
-                    and sim.bank.stone >= 650
-                ):
-                    extra_castles_started += 1
-                    sim.spend(ResourceBundle(stone=650), f"Castle{extra_castles_started + 1}")
-                    c_ex = int(round(calc_construction_time(200.0, 6)))
-                    extra_castle_ready_t = t + 10 + c_ex
-                    sim.add_pending_pop_building(extra_castle_ready_t, 20, "castle")
-                    _pull_builders(sim, ("wood", "farm"), 6, extra_castle_ready_t + 10)
-                    milestones[f"castle{extra_castles_started + 1}_str"] = sim.fmt_time(extra_castle_ready_t)
+            # Extra Castles every time Stone reaches ~800S after clicking Imperial + Forward Castle started
+            if (
+                (imp_clicked or sim.age == 4)
+                and fwd_castle_started
+                and (extra_castle_ready_t is None or t >= extra_castle_ready_t)
+                and sim.bank.stone >= 800
+            ):
+                extra_castles_started += 1
+                sim.spend(ResourceBundle(stone=650), f"Castle{extra_castles_started + 1}")
+                c_ex = int(round(calc_construction_time(200.0, 6)))
+                extra_castle_ready_t = t + 10 + c_ex
+                sim.add_pending_pop_building(extra_castle_ready_t, 20, "castle")
+                _pull_builders(sim, ("wood", "farm"), 6, extra_castle_ready_t + 10)
+                milestones[f"castle{extra_castles_started + 1}_str"] = sim.fmt_time(extra_castle_ready_t)
 
+            # Trebuchets & Castle/University Imperial Techs
+            if sim.age == 4 and fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
                 if t >= castle_busy_until:
-                    treb_target = 4
+                    treb_target = 2
                     treb_train_s = 38 if "conscription" in sim.upgrades else 50
                     if (
                         sim.military_units["trebuchet"] < treb_target
                         and sim.free_pop() >= 1
-                        and sim.total_pop() < 198
+                        and sim.total_pop() < 200
                         and sim.bank.wood >= (200 + house_wood_res)
-                        and sim.bank.gold >= 200
+                        and sim.bank.gold >= (200 + houf_g_res)
                     ):
                         sim.spend(ResourceBundle(wood=200, gold=200), "Trebuchet")
                         castle_busy_until = t + treb_train_s
                         sim.military_units["trebuchet"] += 1
-                    elif not wagenburg_started and sim.military_units["trebuchet"] >= 2 and sim.bank.food >= 300 and sim.bank.gold >= 300:
+                    elif not wagenburg_started and sim.military_units["trebuchet"] >= 2 and not saving_for_houfnice and sim.bank.food >= 300 and sim.bank.gold >= 300:
                         wagenburg_started = True
                         sim.spend(ResourceBundle(food=300, gold=300), "WagenburgTactics")
                         sim.queue_upgrade("wagenburg tactics", t + 45)
@@ -1477,8 +1633,8 @@ def run_bohemians_1tc_fast_hc(
                 s_cnt_r = sim.count_role("stone")
                 cur_camp = max(0, len(sim.lumber_camps) - 1)
 
-                # 1) Gold float guard: keep >= 10 Gold vils once 3 Ranges are active so Mangonels/HCs don't starve!
-                gold_float_thresh = 880 if saving_for_imp else (480 if sim.age == 3 else 1100)
+                # 1) Gold float guard: keep >= 10 Gold vils once 3 Ranges are active so Mangonels/HCs/Bombards don't starve!
+                gold_float_thresh = 880 if (saving_for_imp or saving_for_houfnice) else (480 if sim.age == 3 else 750)
                 min_gold_vils = 10 if ranges_started >= 3 else 4
                 if sim.bank.gold > gold_float_thresh and g_cnt_r > min_gold_vils:
                     stone_target_chk = 660 if tc3_started else 760
@@ -1489,7 +1645,7 @@ def run_bohemians_1tc_fast_hc(
                                 v["role"] = "stone"
                                 v["busy_until"] = t + 15
                                 moved += 1
-                    elif (sim.bank.wood < 450 or ranges_started < 3) and w_cnt_r < 22:
+                    elif (sim.bank.wood < 450 or ranges_started < 3) and w_cnt_r < (34 if imp_clicked else 22):
                         moved = 0
                         for v in sim.vils:
                             if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
@@ -1497,7 +1653,7 @@ def run_bohemians_1tc_fast_hc(
                                 v["camp_idx"] = cur_camp
                                 v["busy_until"] = t + 15
                                 moved += 1
-                    elif sim.bank.food < 1050 and f_cnt_r < 46 and sim.bank.wood >= (180 + house_wood_res):
+                    elif sim.bank.food < 1050 and f_cnt_r < (50 if imp_clicked else 46) and sim.bank.wood >= (180 + house_wood_res):
                         moved = 0
                         for v in sim.vils:
                             if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
@@ -1509,7 +1665,7 @@ def run_bohemians_1tc_fast_hc(
                                 if moved >= 3 or sim.bank.wood < (120 + house_wood_res):
                                     break
                 # 2) Pull vils back from surplus Wood/Farms to Gold when Gold drops low (or below 10 Gold vils with 3 Ranges)
-                elif (sim.bank.gold < (850 if saving_for_imp else (600 if sim.age == 4 else 380)) or (ranges_started >= 3 and g_cnt_r < 10 and sim.bank.gold < 600)) and (sim.bank.wood > 350 or sim.bank.food > 800 or w_cnt_r > 18 or f_cnt_r > 24) and g_cnt_r < 24:
+                elif (sim.bank.gold < (850 if (saving_for_imp or saving_for_houfnice) else (650 if sim.age == 4 else 380)) or (ranges_started >= 3 and g_cnt_r < 10 and sim.bank.gold < 600)) and (sim.bank.wood > 350 or sim.bank.food > 800 or w_cnt_r > 18 or f_cnt_r > 24) and g_cnt_r < 28:
                     src_role = "farm" if (sim.bank.food > 1050 and f_cnt_r > 22) else ("wood" if w_cnt_r > 16 else None)
                     if src_role:
                         moved = 0
@@ -1519,7 +1675,7 @@ def run_bohemians_1tc_fast_hc(
                                 v["busy_until"] = t + 15
                                 moved += 1
                 # 3) Excess Food -> Wood if Wood low
-                elif (not saving_for_imp and sim.bank.food > 1000 and sim.bank.wood < 450 and f_cnt_r > 18) or (sim.age == 4 and not siege_engineers_started and sim.bank.wood < 650 and sim.bank.food > 800 and f_cnt_r > 24):
+                elif (not saving_for_imp and not saving_for_houfnice and sim.bank.food > 950 and sim.bank.wood < 450 and f_cnt_r > 18) or (sim.age == 4 and not siege_engineers_started and sim.bank.wood < 650 and sim.bank.food > 800 and f_cnt_r > 24):
                     moved = 0
                     for v in sim.vils:
                         if v["role"] == "farm" and int(v["busy_until"]) <= t and moved < 4:
@@ -1528,7 +1684,7 @@ def run_bohemians_1tc_fast_hc(
                             v["busy_until"] = t + 15
                             moved += 1
                 # 4) Excess Wood -> Farms once Ranges/SW/TCs are placed (don't steal 275W from TC #2/#3 or 600W Siege Eng!)
-                if tc3_started and (sim.age < 4 or siege_engineers_started) and sim.bank.wood > (300 + house_wood_res) and sim.bank.food < 1000 and w_cnt_r > 16 and f_cnt_r < 42:
+                if tc3_started and (sim.age < 4 or siege_engineers_started) and sim.bank.wood > (300 + house_wood_res) and sim.bank.food < (1200 if saving_for_houfnice else 950) and w_cnt_r > 16 and f_cnt_r < (50 if imp_clicked else 42):
                     moved = 0
                     for v in sim.vils:
                         if v["role"] == "wood" and int(v["busy_until"]) <= t and moved < 4:
@@ -1593,15 +1749,32 @@ def run_bohemians_1tc_fast_hc(
                     f"Monk #1 secures Relic (+30G/min); explains Vils #32–#37 transition to 14 Farms / 16 Wood / 7 Gold ({format_army_counts(current_army_dict()).replace('Army: ', '')}).",
                 )
 
+            # Log Houfnice research start once 5+ Bombards and 100+ vils are online
+            if sim.age == 4 and houfnice_started and not houfnice_logged:
+                houfnice_logged = True
+                add_row(
+                    "",
+                    f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
+                    "Imperial Age",
+                    "Continue 3-TC Vils (to 124 vils) -> Farms / Wood / Gold\nTrain 5+ Bombard Cannons (-225W, -225G each) from 2 Siege Workshops, then research Houfnice (-1100F, -800G, 140s)\nTrain Hand Cannoneers (5 Ranges), Halberdiers (3 Barracks) & Light Cavalry (3 Stables)\nDrop Castles (-650S each) whenever Stone reaches ~800S",
+                    f"5+ Bombard Cannons & {len(sim.vils)} vils online -> Houfnice completes at {milestones.get('houfnice_done_str', '')}.",
+                )
+
         # Completion criterion
         if (
             sim.age == 4
-            and sim.military_units["trebuchet"] >= 3
-            and sim.military_units["hand_cannoneer"] >= 35
+            and len(sim.vils) >= 120
+            and "houfnice" in sim.upgrades
+            and sim.military_units["bombard_cannon"] >= 5
+            and sim.military_units["hand_cannoneer"] >= 34
+            and sim.military_units["light_cav"] >= 10
+            and sim.military_units["pikeman"] >= 12
             and conscription_started
             and ring_armor_started
             and halberdier_upg_started
             and siege_engineers_started
+            and wagenburg_started
+            and two_man_saw_started
         ):
             milestones["full_push_str"] = sim.fmt_time(t)
             milestones["final_vils"] = len(sim.vils)
@@ -1614,12 +1787,13 @@ def run_bohemians_1tc_fast_hc(
             milestones["negative_bank_count"] = len(sim.negative_bank_events)
             milestones["max_castle_float"] = {k: round(v, 1) for k, v in max_castle_float.items()}
             milestones["market_trades"] = sim.market_trades
+            milestones["castles_built"] = 1 + extra_castles_started
             add_row(
-                f"{len(sim.vils)} ({sim.total_pop()})",
-                f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
+                "",
+                f"{sim.fmt_time(houfnice_ready_t or imp_reached_t or t)} – {sim.fmt_time()}" if houfnice_logged else f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
                 "Imperial Age",
-                "Continue Hand Cannoneers (3 Ranges) + Mangonels + Halberdiers + Trebuchets\n6 Wood/Farm vils build extra Castle(s) (-650S each) while keeping 7 vils on Stone\nResearch Hand Cart (-300F, -200W) & Wagenburg Tactics (-300F, -300G)",
-                f"Full Imperial composition online ({len(sim.vils)} Vils + {sum(current_army_dict().values())} Military = {sim.total_pop()} Pop): {format_army_counts(current_army_dict()).replace('Army: ', '')}. Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
+                "Finish Houfnice upgrade + remaining Blacksmith/Stable upgrades (Plate Mail, Iron Casting, Blast Furnace, Chain Barding)\nKeep 7 on Stone & build extra Castles (-650S) every time Stone hits ~800S\nMaintain 200-pop composition: ~124 Vils + Hand Cannons, Houfnices, Halberdiers, Light Cav & Trebuchets",
+                f"Full Imperial composition online ({len(sim.vils)} Vils + {sum(current_army_dict().values())} Military = {sim.total_pop()} Pop; {1 + extra_castles_started} Castles): {format_army_counts(current_army_dict()).replace('Army: ', '')}. Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
             )
             break
 
@@ -1644,18 +1818,30 @@ def run_bohemians_1tc_fast_hc(
     steady_state = planner.compute_steady_state_vils(
         items=[
             ContinuousProductionItem("villager", 3),
-            ContinuousProductionItem("hand cannoneer", 3),
-            ContinuousProductionItem("mangonel", 1),
-            ContinuousProductionItem("spearman", 1),
+            ContinuousProductionItem("hand cannoneer", 5),
+            ContinuousProductionItem("bombard cannon", 2),
+            ContinuousProductionItem("spearman", 3),
+            ContinuousProductionItem("scout cavalry", 3),
         ],
         civ="Bohemians",
-        age=3,
-        upgrades=["double-bit axe", "bow saw", "horse collar", "wheelbarrow", "gold mining", "gold shaft mining"],
+        age=4,
+        upgrades=[
+            "double-bit axe",
+            "bow saw",
+            "two-man saw",
+            "horse collar",
+            "heavy plow",
+            "wheelbarrow",
+            "hand cart",
+            "gold mining",
+            "gold shaft mining",
+            "conscription",
+        ],
         food_source="farmer",
         wood_minutes_since_lc=1.0,
     )
     steady_state["title"] = (
-        "Steady-State Target (3 TC Vils + 3-Range Hand Cannons + 1 SW Mangonel + 1 Rax Pikeman + Farm Reseed, w/ 10% Castle Buffer)"
+        "Steady-State Target (3 TC Vils to 124 + 5-Range Hand Cannons + 2 SW Bombard/Houfnice + 3 Rax Halbs + 3 Stable Light Cav, w/ Stone Castles)"
     )
 
     I = RTS_ICONS
@@ -1724,21 +1910,22 @@ def run_bohemians_1tc_fast_hc(
             wood=imp_c_alloc["wood"], food=imp_c_alloc["food"], gold=imp_c_alloc["gold"], stone=imp_c_alloc["stone"],
             notes=[
                 f"3-TC Boom + 3-Range {I['hand_cannoneer']}s + {I['mangonel']}s + {I['pikeman']}! Send 8 Loom {fwd_src_lbl} vils forward (60s) -> Forward {I['castle']} (-650S, ready {fwd_c_str}).",
-                f"Click {I['imperial_age']} ({imp_c_str}, 1000F, 800G) cleanly before 40:00 while keeping 7 on {I['stone']}.",
+                f"Click {I['imperial_age']} ({imp_c_str}, 1000F, 800G); on the way up add {I['heavy_plow']}, {I['hand_cart']}, {I['fervor']}/{I['sanctity']}, Barracks #2-#3, Ranges #4-#5, 3 {I['stable']}s, SW #2, {I['light_cavalry']} & Forging/Armor!",
             ],
         ),
         RTSOverlayStep(
             villager_count=fin_vils, age=4,
             wood=end_alloc["wood"], food=end_alloc["food"], gold=end_alloc["gold"], stone=end_alloc["stone"],
             notes=[
-                f"Reach {I['imperial_age']} ({imp_r_str}): Conscription, Ring Archer Armor, {I['halberdier']}, Siege Engineers, Wagenburg Tactics + {I['trebuchet']}s & extra {I['castle']}s (-650S from Wood/Farms; keep 7 on {I['stone']})!",
+                f"Reach {I['imperial_age']} ({imp_r_str}): Two-Man Saw, Conscription, Ring Armor, {I['halberdier']}, Siege Engineers, Wagenburg Tactics + 5+ {I['bombard_cannon']} -> Houfnice (at 100+ vils)!",
+                f"Keep 3-TC Vils to {fin_vils} (120-130); produce {I['hand_cannoneer']} + {I['light_cavalry']} + {I['halberdier']} + Houfnice & drop a {I['castle']} (-650S) every ~800S!",
             ],
         ),
     ]
 
     desc = (
         f"Bohemians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) — {variant_label}. "
-        f"Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; tight anti-float Gold -> Stone/Wood/Farm shifting; synced to rules.md."
+        f"Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; 3-TC boom to {fin_vils} vils, eco/military upgrades, Houfnice + HC + Light Cav + Halbs + ~800S Castles; synced to rules.md."
     )
 
     doc = BuildOrderDocument(
@@ -1791,7 +1978,7 @@ def main() -> None:
 
     html_path = export_build_order_html(
         [doc],
-        title="Bohemians Arena FC: 24+2 1-TC Early Hand Cannoneers, Siege, Pikemen & Forward Castle",
+        title="Bohemians Arena FC: 24+2 1-TC Fast Hand Cannoneers -> Houfnice, Light Cav, Halbs & ~800S Castles",
         output_path=OUT_DIR / "bohemians_arena_fc_hand_cannons.html",
     )
     print(f"Wrote HTML report: {html_path}")

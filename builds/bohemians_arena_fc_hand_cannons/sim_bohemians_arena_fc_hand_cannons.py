@@ -49,6 +49,7 @@ class BohemiansArenaSimulator(BuildOrderSimulator):
         self.military_units.update(
             {
                 "hand_cannoneer": 0,
+                "light_cav": 0,
                 "mangonel": 0,
                 "battering_ram": 0,
                 "pikeman": 0,
@@ -60,10 +61,12 @@ class BohemiansArenaSimulator(BuildOrderSimulator):
         self.casualties.update(
             {
                 "hand_cannoneer": 0,
+                "light_cav": 0,
                 "mangonel": 0,
                 "battering_ram": 0,
                 "pikeman": 0,
                 "trebuchet": 0,
+                "bombard_cannon": 0,
             }
         )
 

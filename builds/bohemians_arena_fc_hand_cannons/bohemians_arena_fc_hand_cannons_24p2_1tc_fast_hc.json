@@ -1,9 +1,9 @@
 {
-    "name": "Bohemians Arena Fast Castle (1-TC Early Hand Cannoneers) (24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp)",
+    "name": "Bohemians Arena Fast Castle (1-TC Early Hand Cannoneers) (24+2 1-TC Fast Hand Cannons -> 3-TC Boom, Houfnices, Light Cav, Halbs & ~800S Castles)",
     "civilization": "Bohemians",
     "author": "AoE2 Build Order Generator",
     "source": "rules.md",
-    "description": "Bohemians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) \u2014 24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp. Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; tight anti-float Gold -> Stone/Wood/Farm shifting; synced to rules.md.",
+    "description": "Bohemians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) \u2014 24+2 1-TC Fast Hand Cannons -> 3-TC Boom, Houfnices, Light Cav, Halbs & ~800S Castles. Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; 3-TC boom to 124 vils, eco/military upgrades, Houfnice + HC + Light Cav + Halbs + ~800S Castles; synced to rules.md.",
     "build_order": [
         {
             "villager_count": 6,
@@ -164,44 +164,45 @@
             ]
         },
         {
-            "villager_count": 47,
+            "villager_count": 45,
             "age": 3,
             "resources": {
-                "wood": 16,
+                "wood": 11,
                 "food": 14,
-                "gold": 10,
-                "stone": 7
-            },
-            "notes": [
-                "At 24:59 (Vil #47 -> Wood): 1 Wood vil builds @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_stone.png@ (-100W) & move 7 Wood vils -> @resource/Aoe2de_stone.png@ (23 -> 16 Wood)!",
-                "Keep all 7 on @resource/Aoe2de_stone.png@ permanently for @town_center/Towncenter_aoe2DE.png@ #3 (TC #2 uses leftover 100S!), Forward @castle/Castle_aoe2DE.png@ (-650S), extra Castles & repairs!"
-            ]
-        },
-        {
-            "villager_count": 93,
-            "age": 3,
-            "resources": {
-                "wood": 37,
-                "food": 36,
                 "gold": 13,
                 "stone": 7
             },
             "notes": [
-                "3-TC Boom + 3-Range @archery_range/Hand_cannoneer_aoe2DE.png@s + @siege_workshop/Mangonel_aoe2DE.png@s + @barracks/Pikeman_aoe2DE.png@! Send 8 Loom Wood vils forward (60s) -> Forward @castle/Castle_aoe2DE.png@ (-650S, ready 31:50).",
-                "Click @age/ImperialAgeIconDE_alpha.png@ (34:51, 1000F, 800G) cleanly before 40:00 while keeping 7 on @resource/Aoe2de_stone.png@."
+                "At 24:14 (Vil #47 -> Wood): 1 Wood vil builds @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_stone.png@ (-100W) & move 7 Wood vils -> @resource/Aoe2de_stone.png@ (23 -> 16 Wood)!",
+                "Keep all 7 on @resource/Aoe2de_stone.png@ permanently for @town_center/Towncenter_aoe2DE.png@ #3 (TC #2 uses leftover 100S!), Forward @castle/Castle_aoe2DE.png@ (-650S), extra Castles & repairs!"
             ]
         },
         {
-            "villager_count": 108,
-            "age": 4,
+            "villager_count": 85,
+            "age": 3,
             "resources": {
-                "wood": 59,
-                "food": 16,
-                "gold": 26,
+                "wood": 32,
+                "food": 36,
+                "gold": 10,
                 "stone": 7
             },
             "notes": [
-                "Reach @age/ImperialAgeIconDE_alpha.png@ (38:01): Conscription, Ring Archer Armor, @barracks/Halberdier_aoe2DE.png@, Siege Engineers, Wagenburg Tactics + @castle/Trebuchet_aoe2DE.png@s & extra @castle/Castle_aoe2DE.png@s (-650S from Wood/Farms; keep 7 on @resource/Aoe2de_stone.png@)!"
+                "3-TC Boom + 3-Range @archery_range/Hand_cannoneer_aoe2DE.png@s + @siege_workshop/Mangonel_aoe2DE.png@s + @barracks/Pikeman_aoe2DE.png@! Send 8 Loom Wood vils forward (60s) -> Forward @castle/Castle_aoe2DE.png@ (-650S, ready 31:05).",
+                "Click @age/ImperialAgeIconDE_alpha.png@ (33:12, 1000F, 800G); on the way up add @mill/HeavyPlow_aoe2DE.png@, @town_center/HandCartDE.png@, @monastery/Fervor_aoe2DE.png@/@monastery/Sanctity_aoe2DE.png@, Barracks #2-#3, Ranges #4-#5, 3 @stable/Stable_aoe2DE.png@s, SW #2, @stable/Lightcavalry_aoe2DE.png@ & Forging/Armor!"
+            ]
+        },
+        {
+            "villager_count": 124,
+            "age": 4,
+            "resources": {
+                "wood": 37,
+                "food": 50,
+                "gold": 30,
+                "stone": 7
+            },
+            "notes": [
+                "Reach @age/ImperialAgeIconDE_alpha.png@ (36:22): Two-Man Saw, Conscription, Ring Armor, @barracks/Halberdier_aoe2DE.png@, Siege Engineers, Wagenburg Tactics + 5+ @siege_workshop/Bombard_cannon_aoe2DE.png@ -> Houfnice (at 100+ vils)!",
+                "Keep 3-TC Vils to 124 (120-130); produce @archery_range/Hand_cannoneer_aoe2DE.png@ + @stable/Lightcavalry_aoe2DE.png@ + @barracks/Halberdier_aoe2DE.png@ + Houfnice & drop a @castle/Castle_aoe2DE.png@ (-650S) every ~800S!"
             ]
         }
     ]
