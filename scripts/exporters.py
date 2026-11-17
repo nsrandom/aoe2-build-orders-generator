@@ -1068,6 +1068,7 @@ def export_build_order_html(
                 food_subcols.append(("Farms", "farm_vils"))
 
             has_food = any(r.food_vils > 0 for r in phase_rows) or bool(food_subcols)
+            show_food_total = len(food_subcols) != 1
             has_wood = any(r.wood_vils > 0 for r in phase_rows)
             has_gold = any(r.gold_vils > 0 for r in phase_rows)
             has_stone = any(r.stone_vils > 0 for r in phase_rows)
@@ -1097,8 +1098,10 @@ def export_build_order_html(
                 food_cells = []
                 for _, attr in food_subcols:
                     val = deer_or_chk if attr == "deer_or_chk" else int(getattr(r, attr))
-                    food_cells.append(f'<td class="mono center res-f-sub">{fmt_sub(val)}</td>')
-                if has_food:
+                    cls = "mono center res-f" if len(food_subcols) == 1 else "mono center res-f-sub"
+                    cell_txt = str(val) if len(food_subcols) == 1 else fmt_sub(val)
+                    food_cells.append(f'<td class="{cls}">{cell_txt}</td>')
+                if has_food and show_food_total:
                     food_cells.append(f'<td class="mono center res-f">{r.food_vils}</td>')
 
                 other_res_cells = []
@@ -1123,7 +1126,7 @@ def export_build_order_html(
                     """
                 )
 
-            if food_subcols:
+            if len(food_subcols) >= 2:
                 food_hdr_top = (
                     f'<th colspan="{len(food_subcols) + 1}" class="center food-group-hdr">'
                     f'Food Villagers Breakdown</th>'
@@ -1134,6 +1137,10 @@ def export_build_order_html(
                 )
                 rowspan_attr = ' rowspan="2"'
                 sub_hdr_row = f"<tr>{food_hdr_sub}</tr>"
+            elif len(food_subcols) == 1:
+                food_hdr_top = f'<th class="center">{html.escape(food_subcols[0][0])} {icon_f}</th>'
+                rowspan_attr = ""
+                sub_hdr_row = ""
             elif has_food:
                 food_hdr_top = f'<th class="center">Food {icon_f}</th>'
                 rowspan_attr = ""

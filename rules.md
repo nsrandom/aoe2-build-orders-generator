@@ -1,132 +1,279 @@
 # AoE2:DE Build Order Generation Rules & Assumptions
 
-This document is the authoritative specification for calculating, simulating, and exporting *Age of Empires II: Definitive Edition* build orders in this project.
+This document is the authoritative specification for calculating, simulating, and exporting *Age of Empires II: Definitive Edition* build orders in this project. Output formatting is specified in [`output.md`](output.md).
+
+The only machine-readable copy of these parameters is `RuleConfig` and the data tables in [`scripts/aoe2_data.py`](scripts/aoe2_data.py). Each field there cites its rule number (e.g. `# rule 3.4`); when a rule changes here, change it there too. Build scripts read values from `RuleConfig` / `aoe2_data` instead of hard-coding them, and override per build with `dataclasses.replace(RuleConfig(), ...)`. Build pages and code cite rules by number (e.g. "rule 3.6").
+
+**Status tags**
+- **[USER]**: set or confirmed by Asif.
+- **[PROPOSED]**: default suggested by the model; in force until confirmed or changed.
+- **[DATA]**: game data, from `aoe2-de-tools` or verified against the [AoE2 wiki](https://ageofempires.fandom.com/) / official patch notes (update numbers cited where relevant).
+
+All times are in-game seconds.
 
 ---
 
-## 1. Confirmed Rules
+## 0. Objective & Process
 
-### 1.1 Movement & Walking Times
-- **Initial Houses (`t = 0:00`):** The starting 3 villagers build 2 Houses immediately at `0:00` (`2` vils on House 1 $\rightarrow 18.75\text{s}$, `1` vil on House 2 $\rightarrow 25\text{s}$) and pay **only the 5-second return walk** to sheep under the Town Center (`5s` total walk).
-- **Subsequent House Construction Walk Time:** **5 seconds each way** (`10s` round trip) every time a villager is sent from their current work to build a House and return to work.
-- **Generic Building Construction Walk Time:** **10 seconds each way** (`20s` round trip) for any non-House building (e.g., Barracks, Archery Range, Stable, Blacksmith, Market, Castle, Monastery, University, Siege Workshop).
-- **Sequential Building Construction:** **0 seconds walking time** between consecutive buildings if the same villager is tasked with constructing multiple buildings back-to-back (e.g., House $\rightarrow$ Barracks, or Blacksmith $\rightarrow$ Market).
-- **Resource Camp Construction & Travel Time:**
-  - Sending a villager to a Lumber Camp, Gold Mine, Stone Mine, or Berry Bushes takes **15 seconds one-way**.
-  - When a villager walks `15s` to a resource to construct a drop-off camp (Lumber Camp, Mining Camp, Mill; `35s` build time) and remains there to gather, they pay **only the 15s one-way resource walk** plus the `35s` build time (`0s` walk after completion to start gathering).
-- **Boar Luring & TC Garrison Shooting Idling:**
-  - Luring villager pays **15 seconds walking time each way** (`30s` total luring interruption).
-  - **TC Garrison Idling:** When each boar arrives under the TC, **6–8 villagers** under the TC garrison for **5 seconds** to shoot the boar down (`30–40` villager-seconds of lost gathering per boar).
-  - **Post-Kill Transition:** After shooting the boar down, put **6+ villagers** onto the boar right away if only a small amount of food remains on the active sheep (finish any tiny leftover sheep right after or let 1 vil finish it, avoiding double rot).
-- **Farms & TC Straggler Trees:**
-  - **Farms:** **5 seconds** walking time to place a Farm (`60W`, `15s` build time), and **0 seconds** after completion to begin farming.
-  - **TC Straggler Trees:** **3 seconds** walking time when switching a villager between under-TC food (sheep/boar/deer) and a TC straggler tree (`100W` per tree).
-- **Long-Distance Gathering (Gold / Stone / Chickens):**
-  - Allowed whenever it makes the build order more efficient (e.g., long-distance mining `50–70 Gold` for Loom or Dravidians MAA without spending `100W` on a Mining Camp, or long-distance hunting `6` chickens).
-  - Each long-distance trip pays the **15 seconds each way** (`30s` round trip) travel time per carry capacity load (`10` for Gold/Stone, `35` for Hunter).
+0.1 **[USER]** **Objective:** earliest Castle Age click with no idle TC (other than the 5 s pre-click buffer, rule 5.1), then villager efficiency. When a request states a goal, that goal comes first and these are the tie-breakers.
 
-### 1.2 Resource Gathering, Variants & Decay
-- **Map Variants (Deer vs. Chickens):**
-  - Unless a prompt specifies one variant, **generate build order variants for both Deer and Chickens**.
-  - **Deer Variant:** Assume **3 deer** (`140 Food` each = `420 Food` raw, `0.25 F/s` decay, `0.41 F/s` gather rate) are pushed by the Scout to the TC (`0s` walk time for hunters under the TC).
-  - **Chicken Variant (`6–8` chickens at `75 Food` each, `0.125 F/s` decay):** Consider both **Milling** (often optimal for `8` chickens = `600 Food`) and **Long-Distancing** with `2` villagers (often optimal for `6` chickens = `450 Food`, saving `100W`).
-- **Wood Cutting Efficiency Decay & Camp Refresh:**
-  - Lumberjack gathering efficiency starts at **100%** (`0.39 wood/s` base).
-  - Efficiency **drops by 1% every 20 seconds** (`3%` per minute) elapsed since the current Lumber Camp was completed.
-  - Efficiency **resets to 100%** whenever a **new Lumber Camp** is completed.
-  - **Refresh Target:** Aim to construct a new Lumber Camp when wood cutting efficiency drops to **60%–65%** (`700–800 seconds` / `11m 40s–13m 20s` after the previous Lumber Camp finished, typically around `14:00–15:40` in-game).
-  - **Wood Priority Rule:** Never delay essential progression buildings (Military Buildings, Blacksmith, Market, Eco Upgrades, Houses, or required Farms) to refresh a Lumber Camp; when wood is constrained in early-to-mid Feudal Age, defer the Lumber Camp refresh until core buildings and farms are placed.
-  - **Villager Density per Camp:** Aim for `7–8` villagers max per Lumber Camp; when expanding to `9+` lumberjacks, add a 2nd Lumber Camp (subject to the Wood Priority Rule) to prevent bumping and reset efficiency.
-- **Animal Rot (Decay) & Villager Allocation Limits:**
-  - Villagers must minimize rot by only slaughtering one animal of a given type at a time unless there are too many villagers to fit on a single carcass.
-  - **Ideal villager counts per carcass/patch:**
-    - **Sheep (Herdables):** `6` villagers (max `7` — never put more than `7` on sheep)
-    - **Boar (Large Hunt):** `7–8` villagers (generally `9` or less; up to `10` allowed during age-up transition phases)
-    - **Deer (Small Hunt):** `4` villagers (max `7` — never put more than `7` on deer)
-    - **Chicken:** `2` villagers (`3–4` on a milled patch of `7` chickens)
-  - Never slaughter a new sheep while a boar carcass is already open under the TC (shepherds finishing their current sheep must immediately switch onto the active boar, and if only a small amount of food remains on the sheep when the boar is shot down, put `6+` vils on the boar).
-  - A small amount of additional rot is acceptable if it leads to macro efficiencies elsewhere.
-- **Carried Resources on Re-tasking:**
-  - Villagers do not lose carried resources when re-tasked at the TC or upon completing a drop-off camp.
+0.2 **[USER]** When there is an interesting trade-off or doubt about what to optimise, ask. When two significantly different approaches exist, produce both.
 
-### 1.3 Town Center, Age-Up & Default Technologies
-- **End-of-Age TC Idle Allowance:** Build orders may wait up to **5 seconds of idle Town Center time** at the end of an age before clicking up.
-- **Continuous TC Production:** Outside of the $\le 5\text{s}$ pre-click window, the Town Center must maintain continuous villager production (`25s` per villager, `50 Food`) or research (`Loom`, Age-Up) without unplanned idle time.
-- **Loom Default:** Research **Loom** (`50G, 25s`) right before clicking Feudal Age by default, except in safe Fast Castle builds where it may be delayed if needed.
-- **Economy Upgrade Defaults:**
-  - Automatically include **Double-Bit Axe** (`100F, 50W, 25s`) upon reaching Feudal Age and **Bow Saw** (`150F, 100W, 50s`) upon reaching Castle Age.
-  - Automatically include **Horse Collar** (`75F, 75W, 20s`) before seeding heavy farms (unless executing a tight all-in build).
+0.3 **[USER]** Allowances given in a specific request (e.g. "ranges may idle after 12 archers for a faster Castle Age") apply to that build only and are listed on its page.
 
-### 1.4 Market Usage & Expected Prices
-- **Occasional Market Usage:** Feel free to occasionally use the Market to balance resource stockpiles (e.g., hitting Age-up clicks, Castle/TC drops, or key upgrades without idling production).
-- **Assumed Market Sell Prices (Gold received per `100` Food or Wood sold):**
-  - **Feudal Age:** High prices (`~70 Gold` per `100` Food/Wood sold; `~70–91 Gold` per `100` Stone sold).
-  - **Early to Mid Castle Age:** `~50 Gold` per `100` Food/Wood sold.
-  - **Late Castle Age:** `~30 Gold` per `100` Food/Wood sold.
-  - **Imperial Age:** `~15 Gold` per `100` Food/Wood sold.
+0.4 **[USER]** Rule violations found in the simulation are fixed or explicitly explained next to the build order — never delivered silently.
 
-### 1.5 Build Order Simplicity & Execution Buffer Policy
-- **Tight Early Precision (`~20–30` Vils) vs. High-Level Later Macro:**
-  - Humans can only follow a tight villager-by-villager build order for the first `~20–30` villagers (Dark Age + Feudal Transition for non-Fast-Castle builds; Dark Age + Feudal Age + Castle Click for Fast Castle builds).
-  - **Combined Same-Resource Steps:** Whenever multiple consecutive villagers go to the same resource—including when the 1st villager builds a camp (`Lumber Camp`, `Mill`, `Mining Camp`) or `House` before gathering that resource—combine them into a single step (e.g., `3 vils to Wood after 1st vil builds Lumber Camp`).
-  - **High-Level Macro Phases (Feudal+ for non-FC; Castle+ for FC):** Combine repetitive villager spawns, farm placements, houses, and continuous unit queues into high-level priority-loop instructions (e.g., `"Make vils continuously -> new vils go to stragglers & seed Farms every 60W, while producing X with leftover resources until <criteria>"`).
-- **Imperfect Execution Buffer (Later Stages):**
-  - Simulations apply a realistic human execution buffer in later ages (`~92%` effective macro gather efficiency in Feudal Age and `~90%` in Castle Age+, plus safety reserves before major clicks/buildings) to absorb villager transition friction, bumping, farm placement delays, and army micro overhead.
-- **Resource Float Cap & Late-Game Scaling Rule:**
-  - Unless intentionally banking resources for a concrete target (e.g., Age-Up click, Castle drop, or an expensive power-spike tech), avoid floating more than **`~500–1,000`** of any resource as the economy grows.
-  - Dynamically spend surplus resources according to the build's current phase goals: add extra military production buildings (`Archery Ranges`, `Barracks`, `Stables`, `Siege Workshops`), queue eco/military upgrades, expand Town Centers, or rebalance surplus villagers (and Market trades per Section 1.4 if heavily skewed).
-  - When a Castle Age build prioritizes ramping military quickly before Imperial Age (e.g., hitting an army threshold such as `50+` military units), scale extra military buildings aggressively early, then shift priority to **Imperial Age (`1000F, 800G`, `190s`)** — pausing/idling extra military buildings temporarily if needed so Imperial Age is reliably reached **before `40:00`**.
-- **Ballistics Priority Rule (`20+` Ranged Units):**
-  - Across all builds, once you have **`20+` ranged units** (Archers/Crossbowmen, Skirmishers, Cav Archers, Elephant Archers, Genoese, etc.), prioritize building a **University (`200W`)** and researching **Ballistics (`300W, 175G`)** ahead of extra production buildings, late TCs, or secondary upgrades — unless there is another explicit high-priority goal active (e.g., immediate Castle Age multi-TC boom drops or an imminent Age-Up click).
+## 1. Scope & Starting Conditions
 
-### 1.6 Required Output Formats & Directory Layout (`output.md`)
-See `/Users/asif/Projects/aoe/build-orders/gemini/output.md` for the complete output formatting specification. In summary, for every requested build order, create a dedicated directory `builds/<build_slug>/` containing:
-1. **Build-Specific Python Scripts (`sim_<build_slug>.py`, `generate_<build_slug>.py`):**
-   - Placed directly inside `builds/<build_slug>/` next to the output files.
-2. **Detailed HTML Build Order Report (`<build_slug>.html`):**
-   - **Top-Level Tab Views:** Present all requested or map-dependent variants as top-level tabs.
-   - **Sectioned Timeline Tables:** Broken into separate sections by phase (`Dark Age`, `Feudal Transition`, `Feudal Age`, `Castle Transition`, `Castle Age`, `Imperial Transition`, `Imperial Age`).
-   - **Same-Resource & High-Level Macro Compression:** Consecutive villagers going to the same resource (including building the camp/house first) are combined into 1 row, and Feudal+ (non-FC) / Castle+ (FC) phases use high-level macro priority blocks.
-   - **Strategy Comparison Section:** Interactive population line chart comparing all strategies (solid lines for Villager population, dashed lines of the same color for Military population), with checkboxes to show/hide each strategy as well as Villager and Military series.
-3. **RTS Overlay Compatible JSON (`.json`):**
-   - Follows the `RTS_Overlay` / `AoE Overlay` schema (`name`, `civilization`, `author`, `source`, `description`, `build_order` array of `{villager_count, age, resources: {wood, food, gold, stone}, notes}` using `@category/icon@` asset tags).
-   - Same-resource villager steps (including camp/house builders) are combined into a single step, and later stages use concise macro priority steps.
-   - Every step must satisfy `sum(resources.values()) == villager_count`.
+1.1 **[USER]** Default map is **Arabia**; other maps are named in the request. **[PROPOSED]** 1v1, no opponent interference (no raids, no laming).
+
+1.2 **[DATA]** Start: 200 food, 200 wood, 100 gold, 200 stone; 3 villagers + 1 Scout Cavalry; pop 4/5 (TC provides 5). Civ-specific starts override this (§9).
+
+1.3 **Arabia** home resources:
+- **[DATA]** 8 sheep (4 under the TC, 2 pairs just outside TC line of sight), 6 berry bushes (125 F each), 2 wild boar (340 F), 1 seven-tile and 2 smaller gold mines, 1 five-tile and 1 four-tile stone mine. Small hunt is **2–4 deer** or **6–8 wild chickens**, 50/50 (update 141935). A further group of 3 deer spawns much farther away.
+- **[USER]** The scout finds 2 more sheep at **1:30** and 2 more at **2:30**.
+- **[USER]** Unless a request specifies a deer map, default to a **chicken map** designed for **6 chickens on a mill**, also checked with 8 (rule 8.3).
+
+1.4 **Arena:** **[USER]** default to **6 chickens on a mill** (checked with 8, rule 8.3; Arena chicken map has **8** wild chickens **[DATA]**, 3 deer on deer maps). **[PROPOSED]** Other home resources and sheep timings as on Arabia.
+
+1.5 **[USER]** **Opening:** at `0:00` the 3 starting villagers build 2 houses (2 villagers on house 1 → 18.75 s, 1 villager on house 2 → 25 s), then go to sheep under the TC, paying only the **5 s return walk**. The TC queues villagers from `0:00`.
+
+## 2. Walking
+
+2.1 **[USER]** Sending a villager from work to build a **house**: **5 s each way** (10 s round trip).
+
+2.2 **[USER]** Any **other building** (barracks, range, stable, blacksmith, market, castle, monastery, university, siege workshop…): **10 s each way** (20 s round trip).
+
+2.3 **[USER]** Several buildings in a row by the same villager(s): **0 s** walking between them.
+
+2.4 **[USER]** TC ↔ woodline, gold, stone, berries, or chickens: **15 s one way**. New villagers walk this from the TC to their rally target.
+
+2.5 **[USER]** A villager who walks out to build a drop-off camp (lumber camp, mining camp, mill) pays only the one-way walk (2.4) plus the build time, then gathers there with no further walk.
+
+2.6 **[USER]** Remote site ↔ remote site (wood → gold, old lumber camp → new one): **15 s one way**.
+
+2.7 **[USER]** Switching between food sources under the TC (sheep, boar, pushed deer, farms around the TC), including placing a farm around the TC: **2 s**.
+
+2.8 **[USER]** Switching between under-TC food and a **TC straggler tree** (100 W each): **3 s**.
+
+2.9 **[USER]** Luring a boar: **15 s each way** (30 s without gathering).
+
+2.10 **[USER]** **Forward building** (castle drop, forward base): forward villagers walk the build's forward distance one way (default **60 s**, set per build and stated on its page) and wait there until they can build. Waiting counts as villager idle time.
+
+2.11 **[DATA]** Villager speed 0.8 tiles/s. Wheelbarrow and Hand Cart add +10 % speed each; all walks in this section shorten accordingly.
+
+## 3. Gathering
+
+3.1 **[DATA]** Raw work rates (per second, excluding walking) and carry capacity are in §11.1. **Wild chickens are huntables**: hunter rate 0.41/s, carry 35.
+
+3.2 **[USER]** **Effective rate** = carry ÷ (carry ÷ work rate + drop-off round trip), with these round trips:
+
+| Source | Round trip | Fresh effective rate |
+| :--- | :---: | :---: |
+| Sheep, boar, pushed deer (under TC) | 1.5 s | sheep 18.9/min, boar & deer 24.2/min |
+| Berries (with mill) | 2.5 s | 17.3/min |
+| Gold / stone (with mining camp) | 2.5 s | gold 20.8/min, stone 19.8/min |
+| Wood (fresh lumber camp) | 3.75 s | 20.4/min |
+| TC straggler trees **[PROPOSED]** | 2.5 s | 21.3/min |
+| Deer with a mill | 3 s | 23.8/min |
+| Chickens with a mill | 2.5 s | 23.9/min |
+| Long-distance to the TC (no camp; gold, stone, chickens) | 30 s (rule 2.4 both ways) | gold 10.7/min, chickens 18.2/min |
+
+Farm rates already include walking (§11.1).
+
+3.3 **[USER]** **Long-distance gathering** (no drop-off camp) is allowed whenever it makes the build more efficient (e.g. 50–70 gold for Loom or Dravidian Men-at-Arms without spending 100 W on a mining camp, or hunting 4–6 chickens). Each load pays the 30 s round trip (3.2).
+
+3.4 **[USER]** **Wood efficiency decay & camp refresh:**
+- Efficiency drops **1 % every 20 s** after a lumber camp is completed, to a floor of **60 %**. It multiplies the effective wood rate.
+- A new lumber camp resets efficiency to 100 % **only for the woodcutters working at it**; moving there costs the 15 s site-to-site walk (2.6).
+- A camp is replaced once it is down to **60–65 %** (about 700–800 s after it was built).
+- **Wood priority:** replacing a camp is the **lowest priority** for wood. It only uses wood left after every waiting building, queued research, house, and farm a farmer is waiting for. It does not hold back unit production.
+- **Density:** aim for 7–8 woodcutters per camp; when expanding to 9+, add another camp (subject to the wood priority rule).
+
+3.5 **[DATA]** Killed animals rot continuously, including while being gathered: sheep and deer 0.25 F/s, boar 0.4 F/s, wild chickens 0.125 F/s. Since update 153015, food from animals killed by military or buildings (e.g. the TC) no longer spoils and can be gathered. Jurchens' hunt doesn't rot.
+
+3.6 **[USER]** **Minimise rot:** slaughter only one animal of a type at a time unless too many villagers are on the current one. Villagers per carcass:
+- **Sheep:** 6 (never more than 7)
+- **Boar:** 7–8 (9 or fewer; up to 10 during age-up transitions)
+- **Deer:** 4 (never more than 7)
+- **Chicken:** 2 (3–4 on a milled patch)
+
+A little extra rot is acceptable if it buys efficiency elsewhere. **[PROPOSED]** The next animal is opened 2 s before the current one runs out.
+
+3.7 **[USER]** **Boar:**
+- When a boar arrives under the TC, **6–8 villagers garrison the TC for 5 s** to shoot it down (30–40 villager-seconds lost per boar).
+- Never slaughter a new sheep while a boar carcass is open. Shepherds finishing their sheep switch to the boar. If only a little food remains on the current sheep when the boar goes down, put 6+ villagers on the boar right away and let one villager finish the sheep.
+- **[PROPOSED]** The second boar is lured by one boar hunter, timed to arrive as the first runs out.
+
+3.8 **[USER]** **Deer (when a request specifies a deer map):** taken in Dark Age unless the request says to skip them.
+- The scout pushes deer one at a time, starting once **9 villagers are on food under the TC**. The first deer arrives **30 s** later, then one every **35 s**.
+- Deer are **only pushed in Dark Age**: after the Feudal click the scout is busy.
+- A build need not use every deer; it pushes as many as fit before the click (at least one, unless the request skips deer).
+- Pushed deer are gathered under the TC (round trip per 3.2; switching per 2.7).
+
+3.9 **[USER]** **Chickens (default hunt map):** can't be pushed; hunted in Dark Age unless the request skips them. Default to **6 chickens on a mill** (also checked with 8 under rule 8.3). For Feudal builds, prefer milling chickens before berries since chicken food collects faster (23.9 vs 17.3/min). For Fast Castle builds, if wood allows both mills in Dark Age (chickens + berries), take both; otherwise choose whichever makes more sense.
+
+3.10 **[USER]** **Farms:** 60 W, 15 s build (one farmer per farm), require a completed mill (Khmer excepted for placing farms; a mill is always required to unlock Horse Collar and farm upgrades). Farms go **around the TC first** (**[PROPOSED]** 8 farms), then around mills. **[PROPOSED]** Reseeding costs 60 W and 15 s; a farmer with no wood to reseed stands idle. Farm food: 175 (+75 Horse Collar, +125 Heavy Plow, +175 Crop Rotation) **[DATA]**.
+
+3.11 **[DATA]** Villagers don't lose carried resources when re-tasked; they drop them when they finish building a drop-off camp or farm.
+
+3.12 **[PROPOSED]** When a food source runs out, its villagers move to the next source in the build's fallback list and pay the walk.
+
+## 4. Construction & Population
+
+4.1 **[DATA]** Build times (1 villager) and costs are in §11.3. With *n* builders: build time = base × 3 ÷ (*n* + 2).
+
+4.2 **[USER]** Building costs leave the bank when the builder is sent. Unit and tech costs leave the bank when production starts.
+
+4.3 **[DATA]** House +5 pop, TC +5, castle +20, cap 200. **[USER]** A unit needs free population when its training **starts**; the unit in training counts.
+
+4.4 **[USER]** **House timing:** start houses so **2–3 villagers of room** remain when they finish (just in time is acceptable in a tight build). Add 1 to the threshold for each producing military building and each extra TC. Houses come before units: while a house waits for wood, military buildings don't spend its 25 W.
+
+4.5 **[USER]** Waiting builds are paid **first come, first served**: a later, cheaper building doesn't take the wood a waiting building needs. Builds marked *priority* (e.g. a 2nd archery range) also hold back military production until placed. Lumber camp refreshes are the opposite (3.4).
+
+4.6 **[DATA]** **Age-up requirements:**
+- Feudal needs 2 of barracks / mill / lumber camp / mining camp / dock (houses don't count).
+- Castle needs 2 of archery range / stable / blacksmith / market.
+- Imperial needs 2 Castle Age buildings or a castle.
+
+Archery range, stable, blacksmith and market need Feudal Age, so they can't be placed during the Feudal age-up.
+
+## 5. Town Center & Production
+
+5.1 **[USER]** The TC may be idle for **at most 5 s** before an age-up click (it doubles as a buffer for imperfect play). Any other TC idle (housed, out of food, waiting for Loom gold) is a violation.
+
+5.2 **[USER]** Outside that window the TC produces continuously: villagers (25 s, 50 F, paid as each starts) or research (Loom, age-ups, TC eco techs).
+
+5.3 **[USER]** The TC may hold for up to 5 s when the next age-up will be affordable within that time, instead of starting a villager that would delay the click by 25 s.
+
+5.4 **[PROPOSED]** A tech queued at the TC starts as soon as the current villager finishes. A tech marked "when affordable" doesn't idle the TC: villagers continue until it is affordable. With several TCs, each produces continuously; a TC tech goes to whichever TC is free first.
+
+5.5 **[PROPOSED]** "Continuous production" from a military building means it is never idle while it has the resources. A build may mark lower-priority production ("from leftover resources") that only starts when a reserve for higher-priority queues remains.
+
+5.6 **[USER]** "Click at N pop" means the age-up starts right after the unit that makes pop N (villagers + scout + military) comes out.
+
+## 6. Ages, Techs & Defaults
+
+6.1 **[DATA]** Age-up and tech costs/times are in §11.4.
+
+6.2 **[USER]** **Loom** before the Feudal click on Arabia (except safe Fast Castle builds, where it may be delayed). On Arena it's deferred. Other maps: as stated in the request.
+
+6.3 **[USER]** **Eco upgrade defaults:** Double-Bit Axe on reaching Feudal Age (**[PROPOSED]** tight Fast Castle builds may defer it until after clicking Castle Age when Feudal lasts only ~50 s and wood is needed for Market + Blacksmith); Bow Saw on reaching Castle Age; Horse Collar before heavy farming (unless executing a tight all-in).
+
+6.4 **[USER]** **Ballistics priority:** once a build has **20+ ranged units** (archers, crossbows, skirmishers, cavalry archers, elephant archers, Genoese, …), build a University and research Ballistics ahead of extra production buildings, late TCs, or secondary upgrades, unless another explicit high-priority goal is active (imminent age-up, Castle Age TC drops).
+
+6.5 **[USER]** When a Castle Age build ramps military first (e.g. to 50+ units), scale extra military buildings early, then switch priority to Imperial Age, idling extra military buildings if needed, so Imperial is reliably reached **before 40:00**.
+
+## 7. Market
+
+7.1 **[USER]** Using the Market occasionally to balance stockpiles is fine (hitting age-up clicks, castle/TC drops, key upgrades without idling production).
+
+7.2 **[DATA]** **Trading model** (shared global prices; other players' trades not modelled):
+- Base exchange rates per 100: wood 100, food 115 (update 125283), stone 130.
+- Selling gives 70 % of the rate and buying costs 130 % (30 % fee; Guilds 15 %, Saracens 5 %). Starting prices: sell 100 wood / food / stone for **70 / 81 / 91** gold; buy for 130 / 150 / 169.
+- Each 100 traded moves that resource's rate by **2** (down when selling, up when buying), with a minimum rate of 20 (sell 14 / buy 26).
+
+7.3 **[DATA]** **Relics:** a Relic garrisoned in a Monastery or Fortified Church generates **0.5 gold/s** (30 gold/min).
+
+## 8. Execution, Simplicity & Robustness
+
+8.1 **[USER]** **Tight early precision vs. macro later:** humans can follow a villager-by-villager order for only the first ~20–30 villagers (Dark Age + Feudal transition for normal builds; through the Castle click for Fast Castle).
+- **Combined same-resource steps:** consecutive villagers to the same resource, including the first one building a camp or house, are combined into one step (e.g. "3 vils to wood after the 1st builds a lumber camp").
+- **Macro phases** (Feudal+ for normal builds; Castle+ for Fast Castle) use priority-loop instructions, e.g. "Make vils continuously → new vils to stragglers & seed farms every 60 W, while producing X from leftover resources until <criteria>".
+
+8.2 **[USER]** **Macro efficiency buffer:** macro phases apply **92 %** effective gather efficiency in Feudal and **90 %** in Castle Age+, plus safety reserves before major clicks/buildings. **[PROPOSED]** For Fast Castle builds, the macro phase starts in Castle Age (so Dark Age + Feudal transition run at 100 %, Castle+ at 90 %). This absorbs transition friction, bumping, farm placement delays and army micro.
+
+8.3 **[USER]** **Late-command check** for the precise phases (Dark Age and Feudal), run before delivery:
+- every command 3 s late;
+- 20 runs with each command late by a random 0–5 s;
+- on chicken maps, also 8 chickens instead of 6.
+
+Commands at `0:00` (opening houses, villager queue) are always on time. A scenario passes when the TC is never housed, extra-TC idle is at most 5 s, and every age-up click is at most 15 s later than planned. Failures are fixed or explained next to the build (0.4).
+
+8.4 **[USER]** **Resource float cap:** unless banking for a concrete target (age-up, castle drop, power-spike tech), avoid floating more than **~500–1,000** of any resource. Spend surplus on extra production buildings, eco/military upgrades, extra TCs, villager rebalancing, or Market trades (§7).
+
+## 9. Civilisation Bonuses
+
+9.1 **[USER]** Civ bonuses are researched against the current patch when a civ is first requested and encoded in the simulator (cost, gather-rate, carry, train-time, age-up and start modifiers), with sources noted. The civ notes in §11.1 are a starting point, not a substitute.
+
+## 10. Output
+
+10.1 **[USER]** See [`output.md`](output.md). In summary, each build lives in `builds/<build_slug>/` with:
+- build-specific `sim_<build_slug>.py` and `generate_<build_slug>.py`;
+- an HTML report (`<build_slug>.html`) with a tab per variant, timeline tables split by phase, compressed same-resource and macro rows, and a strategy comparison chart;
+- an RTS Overlay JSON per variant, where every step satisfies `sum(resources.values()) == villager_count`.
 
 ---
 
-## 2. Base Game Data & Constants (from `aoe2-de-tools` & AoE2:DE)
+## 11. Reference Data
 
-### 2.1 Base Villager Gather Rates (`res/sec` & `res/min`)
-| Resource / Role | Base Gather Rate (`res/s`) | Base Gather Rate (`res/min`) | Carry Capacity | Notes / Tech Multipliers |
+### 11.1 Villager Work Rates & Carry Capacity **[DATA]**
+Raw work rates exclude walking; apply rule 3.2 for effective rates (farms excepted).
+
+| Role | Rate (res/s) | Rate (res/min) | Carry | Notes / civ examples |
 | :--- | :---: | :---: | :---: | :--- |
-| **Hunter** (Boar / Deer) | `0.4100` | `24.60` | `35` | Mongols `+40%`, Goths `+15 carry` |
-| **Shepherd** (Sheep / Turkey) | `0.3300` | `19.80` | `10` | Britons `+25%`, Tatars `+50% food` |
-| **Forager** (Berries) | `0.3100` | `18.60` | `10` | Franks `+15%`, Portug. `+wood` |
-| **Farmer** (Base) | `0.3383` | `20.30` | `10` | Includes standard farm walk |
-| **Farmer** (Heavy Plow) | `0.3533` | `21.20` | `11` | |
-| **Farmer** (Wheelbarrow) | `0.3838` | `23.03` | `13` | Near cap before Hand Cart |
-| **Farmer** (Hand Cart) | `0.4000` | `24.00` | `15` | |
-| **Lumberjack** (Base) | `0.3900` | `23.40` | `10` | `-1%` every `20s` (`-3%/min`); refresh LC at `60%–65%` |
-| **Lumberjack** (Double-Bit Axe) | `0.4680` (`~0.47`) | `28.08` | `10` | `+20%` (`100F, 50W, 25s`) |
-| **Lumberjack** (Bow Saw) | `0.5616` (`~0.56`) | `33.70` | `10` | `+20%` (`150F, 100W, 50s`) |
-| **Gold Miner** (Base) | `0.3800` | `22.80` | `10` | |
-| **Gold Miner** (Gold Mining) | `0.4370` (`~0.44`) | `26.22` | `10` | `+15%` (`100F, 75W, 30s`) |
-| **Stone Miner** (Base) | `0.3600` | `21.60` | `10` | |
-| **Stone Miner** (Stone Mining) | `0.4140` (`~0.41`) | `24.84` | `10` | `+15%` (`100F, 75W, 30s`) |
+| **Hunter** (boar, deer, wild chicken) | 0.41 | 24.6 | 35 | Goths: +15 carry, hunt lasts 20 % longer |
+| **Shepherd** | 0.33 | 19.8 | 10 | Britons +25 % |
+| **Forager** | 0.31 | 18.6 | 10 | Portuguese: +0.33 wood per food |
+| **Farmer** (base) | 0.3383 | 20.3 | 10 | Includes farm walking; farms produce at most 0.4 F/s |
+| **Farmer** (Heavy Plow) | 0.3533 | 21.2 | 11 | |
+| **Farmer** (Wheelbarrow) | 0.3838 | 23.0 | 13 | |
+| **Farmer** (Wheelbarrow + Heavy Plow) | 0.3860 | 23.2 | 14 | |
+| **Farmer** (Hand Cart) | 0.4000 | 24.0 | 20 | Farm production cap reached (+1 w/ Heavy Plow) |
+| **Lumberjack** | 0.39 | 23.4 | 10 | Double-Bit Axe & Bow Saw +20 % each, Two-Man Saw +10 %; decay per 3.4 |
+| **Gold miner** | 0.38 | 22.8 | 10 | Gold Mining & Gold Shaft Mining +15 % each |
+| **Stone miner** | 0.36 | 21.6 | 10 | Stone Mining & Stone Shaft Mining +15 % each |
 
-### 2.2 Natural Food Sources & Animal Rot Rates (Standard Arabia)
-With $N$ villagers gathering at rate $r$ and carcass decay rate $d$, harvest duration is $T = \frac{F_0}{N \cdot r + d}$ and net food collected is $F_{\text{net}} = F_0 \cdot \frac{N \cdot r}{N \cdot r + d}$.
+Carry upgrades: Wheelbarrow +27 % (rounded up), Hand Cart brings the total to +100 % of base (10 → 13 → 20; hunters 35 → 44 → 66). Heavy Plow +1 farmer carry.
 
-| Source | Count on Arabia | Initial Food ($F_0$) | Decay Rate ($d$) | Gather Rate ($r$) | Ideal Vils ($N$) | Net Yield at Ideal $N$ | Duration at Ideal $N$ |
+### 11.2 Natural Food Sources & Rot **[DATA]**
+With *N* villagers at rate *r* on a carcass decaying at *d*: duration $T = \frac{F_0}{N r + d}$, net food $F_{\text{net}} = F_0 \cdot \frac{N r}{N r + d}$.
+
+| Source | Arabia count | $F_0$ | Decay $d$ | Rate $r$ | Ideal $N$ | Net at ideal $N$ | Duration |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Sheep** | `8` | `100 F` | `0.25 F/s` | `0.33 F/s` | `6` (max `7`) | `88.8 F` (`11.2 F` rot) | `44.8 s` |
-| **Boar** | `2` | `340 F` | `0.40 F/s` | `0.41 F/s` | `7–8` (max `9`; `10` trans.) | `303.2 F` (`36.8 F` rot @8) | `92.4 s` |
-| **Deer** | `3` | `140 F` | `0.25 F/s` | `0.41 F/s` | `4` (max `7`) | `121.5 F` (`18.5 F` rot) | `74.1 s` |
-| **Chicken** | `6–8` | `75 F` | `0.125 F/s` | `0.33 F/s` | `2` (max `4`) | `63.1 F` (`11.9 F` rot) | `95.5 s` |
-| **Berry Bush** | `6` | `125 F` (`750 F` tot) | `0.00 F/s` | `0.31 F/s` | `4` | `125.0 F` (`0 F` rot) | `~100.8 s/bush` |
-| **Farm (Base)** | — | `175 F` | `0.00 F/s` | `0.3383 F/s` | `1` | `175.0 F` | `517.3 s` |
+| **Sheep** | 8 | 100 | 0.25 | 0.33 | 6 (max 7) | 88.8 (11.2 rot) | 44.8 s |
+| **Boar** | 2 | 340 | 0.40 | 0.41 | 7–8 (max 9; 10 trans.) | 303.2 @8 (36.8 rot) | 92.4 s |
+| **Deer** | 2–4 | 140 | 0.25 | 0.41 | 4 (max 7) | 121.5 (18.5 rot) | 74.1 s |
+| **Wild chicken** | 6–8 | 75 | 0.125 | 0.41 | 2 (3–4 milled) | 65.1 (9.9 rot) | 79.4 s |
+| **Berry bush** | 6 | 125 | 0 | 0.31 | — | 125 | — |
+| **Farm** (base) | — | 175 | 0 | 0.3383 | 1 | 175 | 517 s |
 
-### 2.3 Multi-Villager Construction Speed
-When $n$ villagers construct a building with single-villager build time $t$:
-$$T(n) = \frac{3 \cdot t}{n + 2}$$
+(Carcass figures assume continuous work under the TC; drop-off round trips per 3.2 are additional.)
+
+### 11.3 Buildings **[DATA]**
+
+| Building | Cost | Time (1 villager) |
+| :--- | :--- | :---: |
+| House | 25 W | 25 s |
+| Farm | 60 W | 15 s |
+| Mill / Lumber Camp / Mining Camp | 100 W | 35 s |
+| Blacksmith | 150 W | 40 s |
+| Barracks / Archery Range / Stable | 175 W | 50 s |
+| Market | 175 W | 60 s |
+| University | 200 W | 60 s |
+| Town Center | 275 W, 100 S | 150 s |
+| Castle | 650 S | 200 s |
+
+### 11.4 Ages & Technologies **[DATA]**
+
+| Item | Cost | Time |
+| :--- | :--- | :---: |
+| Feudal Age | 500 F | 130 s |
+| Castle Age | 800 F, 200 G | 160 s |
+| Imperial Age | 1000 F, 800 G | 190 s |
+| Loom | 50 G | 25 s |
+| Wheelbarrow | 175 F, 50 W | 75 s |
+| Hand Cart | 300 F, 200 W | 55 s |
+| Double-Bit Axe | 100 F, 50 W | 25 s |
+| Bow Saw | 150 F, 100 W | 50 s |
+| Horse Collar | 75 F, 75 W | 20 s |
+| Heavy Plow | 125 F, 125 W | 40 s |
+| Gold Mining / Stone Mining | 100 F, 75 W | 30 s |
+| Ballistics | 300 W, 175 G | 60 s |
+| Man-at-Arms upgrade | 100 F, 40 G | 40 s |
+
+---
+
+## Open items
+
+1. **TC-killed carcass rot:** update 153015 confirms the food is gatherable, but not whether it then decays. The garrison method (3.7) assumes normal rot from the kill.

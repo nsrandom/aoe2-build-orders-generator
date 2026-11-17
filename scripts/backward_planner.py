@@ -17,7 +17,7 @@ import math
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Sequence, Tuple
 
-from aoe2_data import AoE2Database, ResourceBundle, RuleConfig
+from aoe2_data import AoE2Database, ResourceBundle, RuleConfig, get_farm_capacity
 
 
 @dataclass
@@ -57,10 +57,12 @@ class BackwardPlanner:
         food_source: str = "farmer",
         wood_minutes_since_lc: float = 1.0,
         include_farm_reseed_wood: bool = True,
+        apply_macro_efficiency: bool = True,
     ) -> Dict[str, object]:
         """
         Computes exact fractional and rounded villager counts needed to sustain
-        continuous production of `items`.
+        continuous production of `items`, including drop-off round trips (rule 3.2)
+        and optional macro execution buffer (rule 8.2).
         """
         total_rate_needed = ResourceBundle()
         per_item_breakdown = []
@@ -91,21 +93,41 @@ class BackwardPlanner:
                 }
             )
 
-        food_gather = self.db.get_gather_rate(
-            food_source, civ=civ, upgrades=upgrades, rules=self.rules
+        macro_eff = 1.0
+        if apply_macro_efficiency:
+            if age == 2:
+                macro_eff = self.rules.feudal_macro_efficiency
+            elif age >= 3:
+                macro_eff = self.rules.castle_macro_efficiency
+
+        food_gather = (
+            self.db.get_gather_rate(
+                food_source, civ=civ, upgrades=upgrades, rules=self.rules, include_dropoff=True
+            )
+            * macro_eff
         )
-        wood_gather = self.db.get_gather_rate(
-            "lumberjack",
-            civ=civ,
-            upgrades=upgrades,
-            wood_minutes_since_lc=wood_minutes_since_lc,
-            rules=self.rules,
+        wood_gather = (
+            self.db.get_gather_rate(
+                "lumberjack",
+                civ=civ,
+                upgrades=upgrades,
+                wood_minutes_since_lc=wood_minutes_since_lc,
+                rules=self.rules,
+                include_dropoff=True,
+            )
+            * macro_eff
         )
-        gold_gather = self.db.get_gather_rate(
-            "gold miner", civ=civ, upgrades=upgrades, rules=self.rules
+        gold_gather = (
+            self.db.get_gather_rate(
+                "gold miner", civ=civ, upgrades=upgrades, rules=self.rules, include_dropoff=True
+            )
+            * macro_eff
         )
-        stone_gather = self.db.get_gather_rate(
-            "stone miner", civ=civ, upgrades=upgrades, rules=self.rules
+        stone_gather = (
+            self.db.get_gather_rate(
+                "stone miner", civ=civ, upgrades=upgrades, rules=self.rules, include_dropoff=True
+            )
+            * macro_eff
         )
 
         exact_food_vils = total_rate_needed.food / food_gather if total_rate_needed.food > 0 else 0.0
@@ -113,14 +135,7 @@ class BackwardPlanner:
         # If farming, calculate wood needed to continuously reseed farms
         reseed_wood_per_sec = 0.0
         if include_farm_reseed_wood and food_source.lower() == "farmer" and exact_food_vils > 0:
-            upg_set = {u.lower() for u in upgrades}
-            farm_food = 175.0
-            if "horse collar" in upg_set:
-                farm_food += 75.0
-            if "heavy plow" in upg_set:
-                farm_food += 125.0
-            if "crop rotation" in upg_set:
-                farm_food += 175.0
+            farm_food = get_farm_capacity(upgrades)
             farm_wood_cost, _ = self.db.get_unit_or_building_spec("farm", civ=civ, age=age)
             reseed_wood_per_sec = total_rate_needed.food * (farm_wood_cost.wood / farm_food)
 

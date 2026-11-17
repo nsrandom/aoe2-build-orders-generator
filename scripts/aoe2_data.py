@@ -3,9 +3,8 @@
 AoE2:DE Game Data Loader & Mechanics Calculator.
 
 Loads unit, building, technology, gather rate, and civilization bonus data from
-`data/` (sourced from PeterWhiteJavascript/aoe2-de-tools) and supplements it
-with build-order-specific constants (age-up costs/times, animal decay rates,
-and civilization lump/discount bonuses).
+`data/` (sourced from PeterWhiteJavascript/aoe2-de-tools) and pairs it with
+the project's `RuleConfig` and data tables matching `rules.md`.
 """
 
 from __future__ import annotations
@@ -16,6 +15,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+
+
+def _round_half_up(x: float) -> int:
+    return int(x + 0.5)
 
 
 @dataclass(frozen=True)
@@ -82,48 +85,172 @@ class ResourceBundle:
 class AnimalSpec:
     name: str
     initial_food: float
-    decay_rate: float  # food lost per second once dead
-    base_gather_rate: float  # food gathered per second per villager
-    ideal_vils: int
-    max_vils: int  # ideal + 2 allowed for short periods
+    decay_rate: float  # food lost per second once dead (rule 3.5)
+    base_gather_rate: float  # raw food/sec per villager (rule 11.1)
+    carry_capacity: float  # hunter carry 35, shepherd carry 10 (rule 11.1)
+    ideal_vils: int  # rule 3.6
+    max_vils: int  # rule 3.6
 
 
 @dataclass(frozen=True)
 class RuleConfig:
-    """Configurable rules and assumptions corresponding to rules.md."""
+    """Authoritative machine-readable parameters matching `rules.md`."""
 
-    initial_house_return_walk_only: float = 5.0
-    house_walk_time_one_way: float = 5.0
-    building_walk_time_one_way: float = 10.0
-    sequential_building_walk_time: float = 0.0
-    boar_lure_walk_time_one_way: float = 15.0
-    boar_garrison_vils: int = 7  # 6-8 vils garrisoned in TC to shoot down boar
-    boar_garrison_seconds: float = 5.0
-    camp_or_berry_walk_time_one_way: float = 15.0
-    farm_walk_time: float = 5.0
-    straggler_walk_time: float = 3.0
-    wood_decay_step_seconds: float = 20.0  # -1% every 20 seconds (-3% per minute)
-    wood_decay_per_step: float = 0.01
-    wood_refresh_lc_threshold: float = 0.65  # build new LC when efficiency drops to 60%-65%
-    max_lumberjacks_per_lc: int = 8  # add 2nd LC when expanding to 9+ lumberjacks (subject to Wood Priority Rule)
-    max_end_of_age_tc_idle_seconds: float = 5.0
-    # Imperfect human execution buffers for later stages (Feudal Age+ and Castle Age+)
-    feudal_macro_efficiency: float = 0.92
-    castle_macro_efficiency: float = 0.90
-    # Assumed Market sell prices (Gold per 100 Food/Wood sold) per rules.md
-    market_sell_gold_feudal: int = 70
-    market_sell_gold_early_mid_castle: int = 50
-    market_sell_gold_late_castle: int = 30
-    market_sell_gold_imperial: int = 15
+    # Walking & setup (rules 1.5, 2.x)
+    initial_house_return_walk_only: float = 5.0  # rule 1.5
+    house_walk_time_one_way: float = 5.0  # rule 2.1
+    building_walk_time_one_way: float = 10.0  # rule 2.2
+    sequential_building_walk_time: float = 0.0  # rule 2.3
+    camp_or_berry_walk_time_one_way: float = 15.0  # rule 2.4
+    site_to_site_walk_time_one_way: float = 15.0  # rule 2.6
+    tc_food_switch_walk_time: float = 2.0  # rule 2.7
+    farm_walk_time: float = 2.0  # rule 2.7 (around TC)
+    straggler_walk_time: float = 3.0  # rule 2.8
+    boar_lure_walk_time_one_way: float = 15.0  # rule 2.9
+    forward_walk_time_default: float = 60.0  # rule 2.10
+    villager_base_speed: float = 0.8  # rule 2.11 (tiles/s)
+
+    # Map resources & scouting timings (rules 1.3, 1.4, 3.8, 3.9)
+    default_hunt_variant: str = "chickens"  # rule 1.3 & 3.9
+    arabia_deer_count: int = 2  # rule 1.3 (deer-map design target)
+    arena_deer_count: int = 3  # rule 1.4 (deer-map design target)
+    arabia_chicken_design_count: int = 6  # rule 1.3
+    arabia_chicken_check_count: int = 8  # rule 1.3
+    arena_chicken_design_count: int = 6  # rule 1.4
+    arena_chicken_count: int = 8  # rule 1.4 (chicken-map actual/check count)
+    sheep_initial_near_tc: int = 4  # rule 1.3
+    sheep_discovery_times_s: Tuple[int, ...] = (90, 150)  # rule 1.3: +2 at 1:30, +2 at 2:30
+    deer_push_min_food_vils: int = 9  # rule 3.8
+    deer_push_first_delay_s: int = 30  # rule 3.8
+    deer_push_interval_s: int = 35  # rule 3.8
+
+    # Boar shooting (rule 3.7)
+    boar_garrison_vils: int = 7  # rule 3.7 (6-8 vils garrison in TC)
+    boar_garrison_seconds: float = 5.0  # rule 3.7
+    open_next_animal_before_empty_s: float = 2.0  # rule 3.6
+
+    # Drop-off round-trip times in seconds (rule 3.2)
+    dropoff_round_trips: Dict[str, float] = field(
+        default_factory=lambda: {
+            "sheep": 1.5,
+            "shepherd": 1.5,
+            "boar": 1.5,
+            "deer": 1.5,
+            "hunter": 1.5,
+            "deer_mill": 3.0,
+            "chicken": 2.5,
+            "chicken_mill": 2.5,
+            "chicken_ld": 30.0,
+            "berries": 2.5,
+            "forager": 2.5,
+            "wood": 3.75,
+            "lumberjack": 3.75,
+            "straggler": 2.5,
+            "gold": 2.5,
+            "gold miner": 2.5,
+            "stone": 2.5,
+            "stone miner": 2.5,
+            "gold_ld": 30.0,
+            "long_distance_gold": 30.0,
+            "stone_ld": 30.0,
+            "long_distance_stone": 30.0,
+        }
+    )
+
+    # Wood efficiency decay & camp refresh (rule 3.4)
+    wood_decay_step_seconds: float = 20.0  # rule 3.4: -1% every 20s (-3%/min)
+    wood_decay_per_step: float = 0.01  # rule 3.4
+    wood_efficiency_floor: float = 0.60  # rule 3.4
+    wood_refresh_lc_threshold: float = 0.65  # rule 3.4
+    max_lumberjacks_per_lc: int = 8  # rule 3.4
+
+    # Farms & Population / TC (rules 3.10, 4.4, 5.1)
+    tc_farms_ring_capacity: int = 8  # rule 3.10
+    house_room_buffer: int = 3  # rule 4.4 (2-3 vils room at completion)
+    max_end_of_age_tc_idle_seconds: float = 5.0  # rule 5.1, 5.3
+
+    # Relics & Market (rules 7.2, 7.3)
+    relic_gold_per_sec: float = 0.50  # rule 7.3
+    market_base_rates: Dict[str, int] = field(
+        default_factory=lambda: {"wood": 100, "food": 115, "stone": 130}
+    )  # rule 7.2
+    market_fee: float = 0.30  # rule 7.2
+    market_rate_step: int = 2  # rule 7.2
+    market_min_rate: int = 20  # rule 7.2
+    market_max_rate: int = 9999  # rule 7.2
+
+    # Macro efficiency & late-command robustness (rules 8.2, 8.3)
+    feudal_macro_efficiency: float = 0.92  # rule 8.2
+    castle_macro_efficiency: float = 0.90  # rule 8.2
+    robustness_fixed_delay_s: int = 3  # rule 8.3
+    robustness_random_runs: int = 20  # rule 8.3
+    robustness_random_max_delay_s: int = 5  # rule 8.3
+    robustness_max_click_delay_s: int = 15  # rule 8.3
 
 
-# Standard Animal / Hunt Specs per rules.md & AoE2:DE
+@dataclass
+class MarketState:
+    """Dynamic AoE2:DE Market price tracker matching rule 7.2."""
+
+    rates: Dict[str, int] = field(
+        default_factory=lambda: {"wood": 100, "food": 115, "stone": 130}
+    )
+    fee: float = 0.30
+    step: int = 2
+    min_rate: int = 20
+    max_rate: int = 9999
+
+    @classmethod
+    def from_rules(cls, rules: RuleConfig, fee: Optional[float] = None) -> "MarketState":
+        return cls(
+            rates=dict(rules.market_base_rates),
+            fee=rules.market_fee if fee is None else fee,
+            step=rules.market_rate_step,
+            min_rate=rules.market_min_rate,
+            max_rate=rules.market_max_rate,
+        )
+
+    def sell_price(self, resource: str) -> int:
+        key = resource.lower()
+        return _round_half_up(self.rates[key] * (1.0 - self.fee))
+
+    def buy_price(self, resource: str) -> int:
+        key = resource.lower()
+        return _round_half_up(self.rates[key] * (1.0 + self.fee))
+
+    def sell(self, resource: str, amount: int = 100) -> int:
+        if amount <= 0 or amount % 100 != 0:
+            raise ValueError("Market trade amount must be a positive multiple of 100.")
+        key = resource.lower()
+        if key not in self.rates:
+            raise ValueError(f"Unsupported market commodity: {resource}")
+        gold_total = 0
+        for _ in range(amount // 100):
+            gold_total += self.sell_price(key)
+            self.rates[key] = max(self.min_rate, self.rates[key] - self.step)
+        return gold_total
+
+    def buy(self, resource: str, amount: int = 100) -> int:
+        if amount <= 0 or amount % 100 != 0:
+            raise ValueError("Market trade amount must be a positive multiple of 100.")
+        key = resource.lower()
+        if key not in self.rates:
+            raise ValueError(f"Unsupported market commodity: {resource}")
+        gold_cost = 0
+        for _ in range(amount // 100):
+            gold_cost += self.buy_price(key)
+            self.rates[key] = min(self.max_rate, self.rates[key] + self.step)
+        return gold_cost
+
+
+# Standard Animal / Hunt Specs per rules.md §3.1, §3.5, §3.6, §11.2
 ANIMALS: Dict[str, AnimalSpec] = {
     "sheep": AnimalSpec(
         name="sheep",
         initial_food=100.0,
         decay_rate=0.25,
         base_gather_rate=0.33,
+        carry_capacity=10.0,
         ideal_vils=6,
         max_vils=7,
     ),
@@ -132,14 +259,16 @@ ANIMALS: Dict[str, AnimalSpec] = {
         initial_food=340.0,
         decay_rate=0.40,
         base_gather_rate=0.41,
+        carry_capacity=35.0,
         ideal_vils=8,
-        max_vils=9,  # up to 10 allowed during age-up transition phases
+        max_vils=9,  # up to 10 allowed during age-up transition phases (rule 3.6)
     ),
     "deer": AnimalSpec(
         name="deer",
         initial_food=140.0,
         decay_rate=0.25,
         base_gather_rate=0.41,
+        carry_capacity=35.0,
         ideal_vils=4,
         max_vils=7,
     ),
@@ -147,13 +276,14 @@ ANIMALS: Dict[str, AnimalSpec] = {
         name="chicken",
         initial_food=75.0,
         decay_rate=0.125,
-        base_gather_rate=0.33,
+        base_gather_rate=0.41,  # rule 3.1: wild chickens are huntables (0.41/s, carry 35)
+        carry_capacity=35.0,
         ideal_vils=2,
         max_vils=4,
     ),
 }
 
-# Age advancement base specifications
+# Age advancement base specifications (rule 11.4)
 AGE_ADVANCE_BASE = {
     2: {"name": "Feudal Age", "cost": ResourceBundle(food=500), "time": 130.0},
     3: {"name": "Castle Age", "cost": ResourceBundle(food=800, gold=200), "time": 160.0},
@@ -183,7 +313,7 @@ CIV_BUILD_BONUSES = {
     "Generic": {},
     "Italians": {
         "age_up_cost_multiplier": 0.85,  # -15% age advance cost
-        "dock_and_university_tech_cost_multiplier": 0.67,
+        "dock_and_university_tech_cost_multiplier": 0.75,  # -25% since Update 169123
         "fishing_ship_cost_multiplier": 0.85,
     },
     "Dravidians": {
@@ -225,6 +355,13 @@ CIV_BUILD_BONUSES = {
     },
     "Malay": {
         "age_up_speed_multiplier": 1.66,  # +66% faster age advancement
+    },
+    "Aztecs": {
+        "carry_delta": 3.0,
+    },
+    "Goths": {
+        "hunter_carry_delta": 15.0,
+        "hunt_food_multiplier": 1.20,
     },
 }
 
@@ -281,6 +418,10 @@ class AoE2Database:
         cost_dict = dict(entry.get("cost", {}))
         train_time = float(entry.get("trainTime", 0.0))
 
+        # data.json carries 270s (Cuman Feudal TC) on Town Center; standard TC is 150s (rule 11.3)
+        if key == "town center":
+            train_time = 150.0
+
         # Check unitVariety.json for civ-specific cost/trainTime modifiers
         age_names = {1: "Dark Age", 2: "Feudal Age", 3: "Castle Age", 4: "Imperial Age"}
         variety = self.unit_variety.get(key, {}).get("civs", {})
@@ -325,7 +466,10 @@ class AoE2Database:
         )
 
         civ_bonus = CIV_BUILD_BONUSES.get(civ, {})
-        barracks_techs = {"man-at-arms", "long swordsman", "two-handed swordsman", "champion", "pikeman", "halberdier", "supplies", "gambesons", "squires", "arson"}
+        barracks_techs = {
+            "man-at-arms", "long swordsman", "two-handed swordsman", "champion",
+            "pikeman", "halberdier", "supplies", "gambesons", "squires", "arson",
+        }
         if key in barracks_techs and "barracks_tech_cost_multiplier" in civ_bonus:
             cost = cost.scale(civ_bonus["barracks_tech_cost_multiplier"])
 
@@ -358,6 +502,29 @@ class AoE2Database:
         lump = civ_bonus.get("on_age_up_lump", {}).get(target_age, ResourceBundle())
         return cost, res_time, lump
 
+    def get_carry_capacity(
+        self, role: str, civ: str = "Generic", upgrades: Sequence[str] = ()
+    ) -> float:
+        """Carry capacity per role with civ bonuses, Wheelbarrow (+27%), Hand Cart (+50% on WB), Heavy Plow (+1 farmer)."""
+        upg_set = {u.lower() for u in upgrades}
+        role_key = role.lower()
+        is_hunter = role_key in ("hunter", "boar", "deer", "deer_mill", "chicken", "chicken_mill", "chicken_ld")
+        base_carry = 35.0 if is_hunter else 10.0
+
+        civ_bonus = CIV_BUILD_BONUSES.get(civ, {})
+        base_carry += float(civ_bonus.get("carry_delta", 0.0))
+        if is_hunter:
+            base_carry += float(civ_bonus.get("hunter_carry_delta", 0.0))
+
+        carry = base_carry
+        if "wheelbarrow" in upg_set:
+            carry = float(round(carry * 1.2695))
+        if "hand cart" in upg_set:
+            carry = float(round(carry * 1.5))
+        if role_key == "farmer" and "heavy plow" in upg_set:
+            carry += 1.0
+        return carry
+
     def get_gather_rate(
         self,
         role: str,
@@ -365,102 +532,127 @@ class AoE2Database:
         upgrades: Sequence[str] = (),
         wood_minutes_since_lc: float = 0.0,
         rules: RuleConfig = RuleConfig(),
+        include_dropoff: bool = True,
+        wood_efficiency_override: Optional[float] = None,
     ) -> float:
         """
-        Computes effective gather rate (res/sec) for a villager role, accounting for:
-        - Base gather rate from aoe2-de-tools
-        - Active economy upgrades (double-bit axe, bow saw, wheelbarrow, heavy plow, etc.)
+        Computes gather rate (res/sec) for a villager role, accounting for:
+        - Base work rate from aoe2-de-tools (and rule 3.1/11.1 for chickens)
+        - Active economy upgrades (Double-Bit Axe, Bow Saw, Two-Man Saw, Gold/Stone Mining, Farmer upgrades)
         - Civilization gather rate bonuses
-        - Wood cutting efficiency decay (-5% per minute since last Lumber Camp)
+        - Drop-off round-trip time (rule 3.2: carry / (carry / raw_rate + round_trip)), shortened by WB/HC speed (rule 2.11)
+        - Wood cutting efficiency decay (-1% every 20s since last LC, floor 60%; rule 3.4)
         """
         upg_set = {u.lower() for u in upgrades}
         role_key = role.lower()
 
+        # Farm rates in §11.1 already include standard farm walking (rule 3.2)
         if role_key == "farmer":
             if "hand cart" in upg_set:
-                rate = 24.0 / 60.0
-            elif "wheelbarrow" in upg_set and "heavy plow" in upg_set:
-                rate = 23.16 / 60.0
-            elif "wheelbarrow" in upg_set:
-                rate = 23.03 / 60.0
-            elif "heavy plow" in upg_set:
-                rate = 21.2 / 60.0
-            else:
-                rate = float(self.base_gathering["farmer"]["gatherRate"])
-        elif role_key in ("lumberjack", "wood"):
-            rate = float(self.base_gathering["lumberjack"]["gatherRate"])
+                return 24.0 / 60.0
+            if "wheelbarrow" in upg_set and "heavy plow" in upg_set:
+                return 23.16 / 60.0
+            if "wheelbarrow" in upg_set:
+                return 23.03 / 60.0
+            if "heavy plow" in upg_set:
+                return 21.2 / 60.0
+            return float(self.base_gathering["farmer"]["gatherRate"])
+
+        is_wood_lc = role_key in ("lumberjack", "wood")
+        if is_wood_lc or role_key == "straggler":
+            raw_rate = float(self.base_gathering["lumberjack"]["gatherRate"])
             if "double-bit axe" in upg_set:
-                rate *= 1.20
+                raw_rate *= 1.20
             if "bow saw" in upg_set:
-                rate *= 1.20
+                raw_rate *= 1.20
             if "two-man saw" in upg_set:
-                rate *= 1.10
-            # Apply wood cutting efficiency drop (-1% every 12 seconds since last LC)
-            if wood_minutes_since_lc > 0:
-                seconds_since_lc = wood_minutes_since_lc * 60.0
-                steps = int(seconds_since_lc // rules.wood_decay_step_seconds)
-                decay_mult = max(0.20, 1.0 - rules.wood_decay_per_step * steps)
-                rate *= decay_mult
-        elif role_key == "straggler":
-            # Straggler trees around TC do not suffer treeline recession
-            rate = float(self.base_gathering["lumberjack"]["gatherRate"])
-        elif role_key == "long_distance_gold":
-            # 10 gold capacity at base gather rate + 15s walk each way (30s round trip)
-            base_r = float(self.base_gathering["gold miner"]["gatherRate"])
-            gather_time = 10.0 / base_r
-            rate = 10.0 / (gather_time + 2.0 * rules.camp_or_berry_walk_time_one_way)
-        elif role_key == "long_distance_stone":
-            base_r = float(self.base_gathering["stone miner"]["gatherRate"])
-            gather_time = 10.0 / base_r
-            rate = 10.0 / (gather_time + 2.0 * rules.camp_or_berry_walk_time_one_way)
-        elif role_key in ("gold miner", "gold"):
-            rate = float(self.base_gathering["gold miner"]["gatherRate"])
+                raw_rate *= 1.10
+        elif role_key in ("gold miner", "gold", "long_distance_gold", "gold_ld"):
+            raw_rate = float(self.base_gathering["gold miner"]["gatherRate"])
             if "gold mining" in upg_set:
-                rate *= 1.15
+                raw_rate *= 1.15
             if "gold shaft mining" in upg_set:
-                rate *= 1.15
-        elif role_key in ("stone miner", "stone"):
-            rate = float(self.base_gathering["stone miner"]["gatherRate"])
+                raw_rate *= 1.15
+        elif role_key in ("stone miner", "stone", "long_distance_stone", "stone_ld"):
+            raw_rate = float(self.base_gathering["stone miner"]["gatherRate"])
             if "stone mining" in upg_set:
-                rate *= 1.15
+                raw_rate *= 1.15
             if "stone shaft mining" in upg_set:
-                rate *= 1.15
+                raw_rate *= 1.15
         elif role_key in ("shepherd", "sheep"):
-            rate = float(self.base_gathering["shepherd"]["gatherRate"])
-        elif role_key in ("hunter", "boar", "deer"):
-            rate = float(self.base_gathering["hunter"]["gatherRate"])
-        elif role_key == "chicken":
-            rate = ANIMALS["chicken"].base_gather_rate
+            raw_rate = float(self.base_gathering["shepherd"]["gatherRate"])
+        elif role_key in ("hunter", "boar", "deer", "deer_mill", "chicken", "chicken_mill", "chicken_ld"):
+            raw_rate = ANIMALS["chicken"].base_gather_rate if "chicken" in role_key else float(self.base_gathering["hunter"]["gatherRate"])
         elif role_key in ("forager", "berries"):
-            rate = float(self.base_gathering["forager"]["gatherRate"])
+            raw_rate = float(self.base_gathering["forager"]["gatherRate"])
         else:
             raise KeyError(f"Unknown gatherer role: {role}")
 
-        # Apply civ gather rate multiplier if present
+        # Apply civ raw gather rate multiplier before drop-off walking
         civ_mults = CIV_BUILD_BONUSES.get(civ, {}).get("gather_rate_multipliers", {})
         canonical = {
             "sheep": "shepherd",
             "boar": "hunter",
             "deer": "hunter",
+            "deer_mill": "hunter",
+            "chicken": "hunter",
+            "chicken_mill": "hunter",
+            "chicken_ld": "hunter",
             "wood": "lumberjack",
+            "straggler": "lumberjack",
             "berries": "forager",
             "gold": "gold miner",
+            "long_distance_gold": "gold miner",
+            "gold_ld": "gold miner",
             "stone": "stone miner",
+            "long_distance_stone": "stone miner",
+            "stone_ld": "stone miner",
         }.get(role_key, role_key)
         if canonical in civ_mults:
-            rate *= civ_mults[canonical]
+            raw_rate *= civ_mults[canonical]
+
+        # Apply drop-off round trip (rule 3.2) and WB/HC villager speed bonus (rule 2.11)
+        rate = raw_rate
+        round_trip = rules.dropoff_round_trips.get(role_key, 0.0)
+        if include_dropoff and round_trip > 0.0:
+            speed_mult = 1.0
+            if "wheelbarrow" in upg_set:
+                speed_mult *= 1.10
+            if "hand cart" in upg_set:
+                speed_mult *= 1.10
+            eff_rt = round_trip / speed_mult
+            carry = self.get_carry_capacity(role_key, civ=civ, upgrades=upgrades)
+            rate = carry / ((carry / raw_rate) + eff_rt)
+
+        # Apply wood cutting efficiency decay (-1% every 20s since last LC, floor 60%; rule 3.4)
+        if is_wood_lc:
+            if wood_efficiency_override is not None:
+                rate *= max(rules.wood_efficiency_floor, wood_efficiency_override)
+            elif wood_minutes_since_lc > 0:
+                seconds_since_lc = wood_minutes_since_lc * 60.0
+                steps = int(seconds_since_lc // rules.wood_decay_step_seconds)
+                decay_mult = max(
+                    rules.wood_efficiency_floor, 1.0 - rules.wood_decay_per_step * steps
+                )
+                rate *= decay_mult
 
         return rate
 
     def calc_animal_harvest(
-        self, animal_type: str, num_vils: int, civ: str = "Generic"
+        self,
+        animal_type: str,
+        num_vils: int,
+        civ: str = "Generic",
+        include_dropoff: bool = True,
     ) -> Dict[str, float]:
         """
-        Computes the exact harvest duration, net food collected, and rot lost
-        when `num_vils` harvest a single carcass of `animal_type`.
+        Computes harvest duration, net food collected, and rot lost when
+        `num_vils` harvest a single carcass of `animal_type`.
         """
         spec = ANIMALS[animal_type.lower()]
-        gather_rate = self.get_gather_rate(animal_type.lower(), civ=civ)
+        gather_rate = self.get_gather_rate(
+            animal_type.lower(), civ=civ, include_dropoff=include_dropoff
+        )
         total_gather_rate = num_vils * gather_rate
         depletion_rate = total_gather_rate + spec.decay_rate
         duration = spec.initial_food / depletion_rate
@@ -479,8 +671,21 @@ class AoE2Database:
         }
 
 
+def get_farm_capacity(upgrades: Sequence[str] = ()) -> float:
+    """Farm food pool given active Mill upgrades (rule 3.10)."""
+    upg_set = {u.lower() for u in upgrades}
+    food = 175.0
+    if "horse collar" in upg_set:
+        food += 75.0
+    if "heavy plow" in upg_set:
+        food += 125.0
+    if "crop rotation" in upg_set:
+        food += 175.0
+    return food
+
+
 def calc_construction_time(base_time: float, num_builders: int = 1) -> float:
-    """AoE2:DE multi-villager construction formula: T = 3 * t / (n + 2)."""
+    """AoE2:DE multi-villager construction formula: T = 3 * t / (n + 2) (rule 4.1)."""
     if num_builders < 1:
         raise ValueError("num_builders must be >= 1")
     return (3.0 * base_time) / (num_builders + 2)
@@ -491,10 +696,15 @@ if __name__ == "__main__":
     print("=== Sample Loaded Game Data ===")
     print("Italians Feudal Advance:", db.get_age_advance_spec(2, "Italians"))
     print("Italians Castle Advance:", db.get_age_advance_spec(3, "Italians"))
+    print("Italians Ballistics:", db.get_upgrade_spec("ballistics", "Italians"))
     print("Dravidians Feudal Advance:", db.get_age_advance_spec(2, "Dravidians"))
     print("Dravidians MAA Upgrade:", db.get_upgrade_spec("man-at-arms", "Dravidians"))
     print("Genoese Crossbowman:", db.get_unit_or_building_spec("genoese crossbowman", "Italians", 3))
-    print("\n=== Animal Decay Table at Ideal Villager Counts ===")
+    print("\n=== Effective Gather Rates (per min, rule 3.2) ===")
+    for role in ("sheep", "boar", "deer", "chicken_mill", "chicken_ld", "berries", "wood", "straggler", "gold", "gold_ld", "stone"):
+        r = db.get_gather_rate(role)
+        print(f"  {role:12s}: {r:.4f}/s ({r*60:.1f}/min)")
+    print("\n=== Animal Decay Table at Ideal Villager Counts (under TC / milled) ===")
     for anim_name, spec in ANIMALS.items():
-        res = db.calc_animal_harvest(anim_name, spec.ideal_vils)
+        res = db.calc_animal_harvest(anim_name, spec.ideal_vils, include_dropoff=True)
         print(f"  {anim_name.capitalize():8s} ({spec.ideal_vils} vils): {res['net_food']}F collected, {res['rot_food']}F rotted over {res['duration_s']}s ({res['efficiency_pct']}%)")

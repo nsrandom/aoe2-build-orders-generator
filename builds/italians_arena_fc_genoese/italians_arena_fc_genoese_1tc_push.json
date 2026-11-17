@@ -3,7 +3,7 @@
     "civilization": "Italians",
     "author": "AoE2 Build Order Generator",
     "source": "rules.md",
-    "description": "Italians Arena FC (3 Deer, No Chickens) \u2014 Strategy 1: 1 TC Heavy Army Push (Genoese + Light Cav + Monks + Rams -> Imp TCs). Includes 5s Boar-shooting TC garrison idling, updated animal caps (<=7 Sheep, 7-8 Boar / 10 transition), combined same-resource steps for Dark/Feudal/Castle-Click, 20+ ranged Ballistics priority, and high-level Castle+ macro loops with 92% Feudal / 90% Castle+ execution buffers.",
+    "description": "Italians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) \u2014 Strategy 1: 1 TC Heavy Army Push (Genoese + Light Cav + Monks + Rams -> Imp TCs). Synced to rules.md (drop-off round trips, 60% wood floor, dynamic Market, real tech/builder times, Italians -25% Univ, late-command check).",
     "build_order": [
         {
             "villager_count": 6,
@@ -15,7 +15,7 @@
                 "stone": 0
             },
             "notes": [
-                "Vils #1-#6: @resource/Aoe2de_hammer.png@ 2 Houses at 0:00, then all 6 on @animal/Sheep_aoe2DE.png@ under TC (max 7 on Sheep); push 3 @animal/Deer_aoe2DE.png@."
+                "Vils #1-#6: @resource/Aoe2de_hammer.png@ 2 Houses at 0:00, then all 6 on @animal/Sheep_aoe2DE.png@ under TC."
             ]
         },
         {
@@ -28,7 +28,7 @@
                 "stone": 0
             },
             "notes": [
-                "Vils #7-#9 (3 vils) -> @resource/Aoe2de_wood.png@ (1st vil walks 15s + @resource/Aoe2de_hammer.png@ @lumber_camp/Lumber_camp_aoe2de.png@ #1, then all 3 on Wood)."
+                "Vils #7-#9 (3 vils) -> @resource/Aoe2de_wood.png@ (1st vil walks 15s + @resource/Aoe2de_hammer.png@ @lumber_camp/Lumber_camp_aoe2de.png@ #1)."
             ]
         },
         {
@@ -41,7 +41,7 @@
                 "stone": 0
             },
             "notes": [
-                "Vil #10 lures 1st @animal/Boar_aoe2DE.png@ (03:25 arrival -> garrison 7 TC vils 5s to shoot -> 6+ on Boar); Vil #11 to @resource/Aoe2de_wood.png@ (4 on Wood)."
+                "Vil #10 lures 1st @animal/Boar_aoe2DE.png@ (garrison 7 TC vils 5s on arrival); Vil #11 to @resource/Aoe2de_wood.png@ (4 on Wood)."
             ]
         },
         {
@@ -54,7 +54,7 @@
                 "stone": 0
             },
             "notes": [
-                "Vils #12-#15 (4 vils) -> Pushed @animal/Deer_aoe2DE.png@ under TC (1st vil builds House #3, all 4 on Deer). Lure 2nd @animal/Boar_aoe2DE.png@ at 04:43 (garrison 7 TC vils 5s at 05:13)."
+                "Vils #12-#15 (4 vils) -> 6 Chickens on @mill/Mill_aoe2de.png@ #1 (Vil #12 builds @mill/Mill_aoe2de.png@, Vil #13 builds House #3). Lure 2nd @animal/Boar_aoe2DE.png@ before 1st finishes."
             ]
         },
         {
@@ -67,7 +67,7 @@
                 "stone": 0
             },
             "notes": [
-                "Vils #16-#19 (4 vils) -> @resource/BerryBushDE.png@ (1st vil builds @mill/Mill_aoe2de.png@, 3rd builds House #4, all 4 on Berries)."
+                "Vils #16-#19 (4 vils) -> @resource/BerryBushDE.png@ (1st builds @mill/Mill_aoe2de.png@ #2, 3rd builds House #4)."
             ]
         },
         {
@@ -80,7 +80,7 @@
                 "stone": 4
             },
             "notes": [
-                "Vils #20-#23 (4 vils) -> @resource/Aoe2de_stone.png@ (1st vil builds @mining_camp/Mining_camp_aoe2de.png@, 4th builds House #5, all 4 on Stone)."
+                "Vils #20-#23 (4 vils) -> @resource/Aoe2de_stone.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@, 4th builds House #5)."
             ]
         },
         {
@@ -93,7 +93,7 @@
                 "stone": 4
             },
             "notes": [
-                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F, 0s TC idle); Sheep #8 finishes -> 2 @mill/FarmDE.png@s + cap LC #1 at 8."
+                "Vils #24-#26 (3 vils) -> @resource/Aoe2de_wood.png@ (7 on LC #1). Click @age/FeudalAgeIconDE_alpha.png@ (425F); Sheep #8 finishes -> seed up to 2 @mill/FarmDE.png@s + cap LC #1 at 8."
             ]
         },
         {
@@ -106,8 +106,8 @@
                 "stone": 4
             },
             "notes": [
-                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 (2 vils) -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil @blacksmith/Blacksmith_aoe2de.png@.",
-                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+70G high Feudal price) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G)."
+                "In @age/FeudalAgeIconDE_alpha.png@: Vils #27-#28 -> @resource/Aoe2de_gold.png@ (1st builds @mining_camp/Mining_camp_aoe2de.png@); 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil @blacksmith/Blacksmith_aoe2de.png@.",
+                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G) & click @age/CastleAgeIconDE_alpha.png@ (680F, 170G)."
             ]
         },
         {
@@ -120,50 +120,50 @@
                 "stone": 4
             },
             "notes": [
-                "Click @age/CastleAgeIconDE_alpha.png@: @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5, @mining_camp/GoldMiningDE.png@, @lumber_camp/Lumber_camp_aoe2de.png@ #2, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 & Fletching.",
-                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): Drop Defensive @castle/Castle_aoe2DE.png@ (0s wait <= 10s), @lumber_camp/BowSaw_aoe2DE.png@, continuous 1 @town_center/Towncenter_aoe2DE.png@."
+                "Click @age/CastleAgeIconDE_alpha.png@: @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, Farms #3-#5, @mining_camp/GoldMiningDE.png@, @barracks/Barracks_aoe2DE.png@ -> @stable/Stable_aoe2DE.png@ #1 & Fletching.",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (15:15, 650+ @resource/Aoe2de_stone.png@): Drop Defensive @castle/Castle_aoe2DE.png@, @lumber_camp/BowSaw_aoe2DE.png@, continuous 1 @town_center/Towncenter_aoe2DE.png@."
             ]
         },
         {
-            "villager_count": 44,
+            "villager_count": 57,
             "age": 3,
             "resources": {
-                "wood": 14,
+                "wood": 27,
                 "food": 22,
                 "gold": 6,
                 "stone": 2
             },
             "notes": [
-                "Build @monastery/Monastery_aoe2DE.png@ (2 Monks, max 1 Relic assumed) + Genoese & @stable/Lightcavalry_aoe2DE.png@; drop 2 @resource/Aoe2de_stone.png@ -> @resource/Aoe2de_wood.png@ (keep 2 on Stone).",
-                "At 20+ Genoese: prioritize @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (24:28, -33% Italians) ahead of extra buildings!"
+                "Build @monastery/Monastery_aoe2DE.png@ (2 Monks, 1 Relic = +30G/min) + Genoese & @stable/Lightcavalry_aoe2DE.png@; drop 2 @resource/Aoe2de_stone.png@ -> @resource/Aoe2de_wood.png@.",
+                "At 20+ Genoese: prioritize @university/University_aoe2DE.png@ -> @university/Ballistics_aoe2DE.png@ (29:47, -25% Italians) ahead of extra buildings!"
             ]
         },
         {
-            "villager_count": 60,
+            "villager_count": 70,
             "age": 3,
             "resources": {
-                "wood": 15,
-                "food": 28,
-                "gold": 15,
+                "wood": 37,
+                "food": 26,
+                "gold": 5,
                 "stone": 2
             },
             "notes": [
-                "At 30+ Army: send Loom vil forward -> Forward @siege_workshop/Siege_workshop_aoe2DE.png@ & 3-4 @siege_workshop/Battering_ram_aoe2DE.png@s + Stable #2; stick to 1 @town_center/Towncenter_aoe2DE.png@!",
-                "Shift priority to @age/ImperialAgeIconDE_alpha.png@ (30:26, 850F/680G); immediately add @town_center/Towncenter_aoe2DE.png@ #2 & #3 after clicking Imp!"
+                "At 30+ Army: send Loom vil forward (60s walk) -> Forward @siege_workshop/Siege_workshop_aoe2DE.png@ & 3-4 @siege_workshop/Battering_ram_aoe2DE.png@s + Stable #2; stick to 1 @town_center/Towncenter_aoe2DE.png@!",
+                "Click @age/ImperialAgeIconDE_alpha.png@ (34:26, 850F/680G); add @town_center/Towncenter_aoe2DE.png@ #2 & #3 after clicking Imp!"
             ]
         },
         {
             "villager_count": 98,
             "age": 4,
             "resources": {
-                "wood": 47,
+                "wood": 40,
                 "food": 38,
-                "gold": 13,
+                "gold": 20,
                 "stone": 0
             },
             "notes": [
-                "Reach @age/ImperialAgeIconDE_alpha.png@ (33:36): Conscription, @university/Chemistry_aoe2DE.png@ (-33%), Bracer, Elite Genoese, Hussar, Pavise, Silk Armor + @siege_workshop/Bombard_cannon_aoe2DE.png@s!",
-                "Anti-Float Rule: Spend surplus into extra Stables/Castles/upgrades to keep resource float < 500-1000."
+                "Reach @age/ImperialAgeIconDE_alpha.png@ (37:36): Conscription, @university/Chemistry_aoe2DE.png@ (-25%), Bracer, Elite Genoese, Hussar, Pavise, Silk Road + @siege_workshop/Bombard_cannon_aoe2DE.png@s!",
+                "Anti-Float Rule (8.4): Spend surplus into extra Stables/Castles/upgrades (< 500-1000 float)."
             ]
         }
     ]
