@@ -1,0 +1,182 @@
+{
+    "name": "Bohemians Arena Fast Castle (1-TC Early Hand Cannoneers) (24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp)",
+    "civilization": "Bohemians",
+    "author": "AoE2 Build Order Generator",
+    "source": "rules.md",
+    "description": "Bohemians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) \u2014 24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp. Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; tight anti-float Gold -> Stone/Wood/Farm shifting; synced to rules.md.",
+    "build_order": [
+        {
+            "villager_count": 6,
+            "age": 1,
+            "resources": {
+                "wood": 0,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #1-#6: @resource/Aoe2de_hammer.png@ 2 Houses at 0:00, then all 6 on @animal/Sheep_aoe2DE.png@ under TC."
+            ]
+        },
+        {
+            "villager_count": 9,
+            "age": 1,
+            "resources": {
+                "wood": 3,
+                "food": 6,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #7-#9 (3 vils) -> @resource/Aoe2de_wood.png@ (1st vil walks 15s + @resource/Aoe2de_hammer.png@ @lumber_camp/Lumber_camp_aoe2de.png@ #1)."
+            ]
+        },
+        {
+            "villager_count": 11,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 7,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #10 lures 1st @animal/Boar_aoe2DE.png@ (garrison 7 TC vils 5s on arrival); Vil #11 to @resource/Aoe2de_wood.png@ (4 on Wood)."
+            ]
+        },
+        {
+            "villager_count": 15,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 11,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #12-#15 (4 vils) -> 6 Chickens on @mill/Mill_aoe2de.png@ #1 (Vil #12 builds @mill/Mill_aoe2de.png@, Vil #13 builds House #3). Lure 2nd @animal/Boar_aoe2DE.png@ before 1st finishes."
+            ]
+        },
+        {
+            "villager_count": 19,
+            "age": 1,
+            "resources": {
+                "wood": 4,
+                "food": 15,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #16-#19 (4 vils) -> @resource/BerryBushDE.png@ (1st builds @mill/Mill_aoe2de.png@ #2, 3rd builds House #4)."
+            ]
+        },
+        {
+            "villager_count": 21,
+            "age": 1,
+            "resources": {
+                "wood": 6,
+                "food": 15,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vils #20-#21 (2 vils) -> @resource/Aoe2de_wood.png@ at @lumber_camp/Lumber_camp_aoe2de.png@ #1 (skip Dark Age Gold MC!)."
+            ]
+        },
+        {
+            "villager_count": 23,
+            "age": 1,
+            "resources": {
+                "wood": 7,
+                "food": 16,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #22 builds @other/House_aoe2DE.png@ #5 -> @resource/Aoe2de_wood.png@ (7 on Wood); Vil #23 -> @animal/Sheep_aoe2DE.png@/Food."
+            ]
+        },
+        {
+            "villager_count": 24,
+            "age": 1,
+            "resources": {
+                "wood": 7,
+                "food": 16,
+                "gold": 1,
+                "stone": 0
+            },
+            "notes": [
+                "Vil #24 -> Long-distance 10 @resource/Aoe2de_gold.png@ (finish before @market/Market_aoe2DE.png@ completes, then return to Wood/@mill/FarmDE.png@s)! Click @age/FeudalAgeIconDE_alpha.png@ (500F) at 08:45; Sheep #8 -> Stragglers + up to 8 @mill/FarmDE.png@s."
+            ]
+        },
+        {
+            "villager_count": 26,
+            "age": 2,
+            "resources": {
+                "wood": 9,
+                "food": 17,
+                "gold": 0,
+                "stone": 0
+            },
+            "notes": [
+                "In @age/FeudalAgeIconDE_alpha.png@: Free Gold/Stone Mining! Vils #25-#26 -> @resource/Aoe2de_wood.png@; 3 vils @resource/Aoe2de_hammer.png@ @market/Market_aoe2DE.png@ & 1 vil Bohemian @blacksmith/Blacksmith_aoe2de.png@ (50W!).",
+                "Sell 100 @resource/Aoe2de_stone.png@ at @market/Market_aoe2DE.png@ (+91G -> 201G, saving 200W!) & click @age/CastleAgeIconDE_alpha.png@ (800F, 200G)!"
+            ]
+        },
+        {
+            "villager_count": 26,
+            "age": 3,
+            "resources": {
+                "wood": 10,
+                "food": 12,
+                "gold": 4,
+                "stone": 0
+            },
+            "notes": [
+                "Click @age/CastleAgeIconDE_alpha.png@: @lumber_camp/DoubleBitAxe_aoe2DE.png@ + @mill/HorseCollar_aoe2DE.png@, @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_gold.png@ (4 vils) & @barracks/Barracks_aoe2DE.png@.",
+                "Reach @age/CastleAgeIconDE_alpha.png@ (14:26): Stay 1 TC! Drop Bohemian @university/University_aoe2DE.png@ (100W!) + @archery_range/Archery_range_aoe2DE.png@ #1 + @lumber_camp/BowSaw_aoe2DE.png@ -> @university/Chemistry_aoe2DE.png@ + @monastery/Monastery_aoe2DE.png@ (175W, 2 @monastery/Monk_aoe2DE.png@s for Relic +30G/min!) -> 1st @archery_range/Hand_cannoneer_aoe2DE.png@ at 17:17!"
+            ]
+        },
+        {
+            "villager_count": 67,
+            "age": 3,
+            "resources": {
+                "wood": 33,
+                "food": 24,
+                "gold": 10,
+                "stone": 0
+            },
+            "notes": [
+                "After @monastery/Monastery_aoe2DE.png@ + 2 @monastery/Monk_aoe2DE.png@s: add @archery_range/Archery_range_aoe2DE.png@ #2 & #3 + @siege_workshop/Siege_workshop_aoe2DE.png@ (2+ @siege_workshop/Mangonel_aoe2DE.png@s) + @barracks/Pikeman_aoe2DE.png@s.",
+                "At 24:59: @mining_camp/Mining_camp_aoe2de.png@ on @resource/Aoe2de_stone.png@ (-100W, 7 vils) -> mine 750S for @town_center/Towncenter_aoe2DE.png@ #3 (TC #2 uses leftover 100S!) + Forward @castle/Castle_aoe2DE.png@!"
+            ]
+        },
+        {
+            "villager_count": 93,
+            "age": 3,
+            "resources": {
+                "wood": 41,
+                "food": 38,
+                "gold": 14,
+                "stone": 0
+            },
+            "notes": [
+                "3-Range @archery_range/Hand_cannoneer_aoe2DE.png@s + @siege_workshop/Mangonel_aoe2DE.png@s + @barracks/Pikeman_aoe2DE.png@! Send 8 Loom vils forward (60s) -> Forward @castle/Castle_aoe2DE.png@ (-650S, ready 32:05).",
+                "Click @age/ImperialAgeIconDE_alpha.png@ (35:19, 1000F, 800G) cleanly before 40:00."
+            ]
+        },
+        {
+            "villager_count": 108,
+            "age": 4,
+            "resources": {
+                "wood": 40,
+                "food": 44,
+                "gold": 24,
+                "stone": 0
+            },
+            "notes": [
+                "Reach @age/ImperialAgeIconDE_alpha.png@ (38:29): Conscription, Ring Archer Armor, @barracks/Halberdier_aoe2DE.png@, Siege Engineers, Wagenburg Tactics + @castle/Trebuchet_aoe2DE.png@s from Forward @castle/Castle_aoe2DE.png@!"
+            ]
+        }
+    ]
+}

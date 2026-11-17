@@ -1,0 +1,1709 @@
+#!/usr/bin/env python3
+"""
+Generator & 1-Second Discrete-Event Simulator for:
+Bohemians Arena Fast Castle (24+2 1-TC Fast Hand Cannoneers):
+  - 6 Chickens Milled + Berry Mill in Dark Age (Checked w/ 8 Chickens)
+  - 1 vil long-distance mines 10 Gold before Market completes + sell 100 Stone (+91G -> 201G, saving 200W!)
+  - Stay 1 TC & 1 Range until Chemistry completes & Hand Cannoneers start producing ASAP
+  - Scale quickly to 3 Ranges, Siege Workshop (2+ Mangonels), Pikemen, and TC #2 & TC #3
+  - Shift surplus Gold miners to Stone / Wood / Farms (+ Market buy fallback on bottlenecks) to avoid gold float
+  - Build a Forward Castle -> Imperial Age & Trebuchets push (<40:00)
+
+Enforces all rules in `rules.md` and `output.md`.
+"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Tuple
+
+THIS_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(THIS_DIR))
+sys.path.insert(0, str(THIS_DIR.parents[1] / "scripts"))
+
+from aoe2_data import ResourceBundle, calc_construction_time
+from backward_planner import BackwardPlanner, ContinuousProductionItem
+from exporters import (
+    BuildOrderDocument,
+    DetailedBuildRow,
+    RTS_ICONS,
+    RTSOverlayStep,
+    export_build_order_html,
+    export_rts_overlay_json,
+    format_army_counts,
+)
+from sim_bohemians_arena_fc_hand_cannons import BohemiansArenaSimulator
+from simulator import run_late_command_checks
+
+OUT_DIR = THIS_DIR
+
+
+def _pull_builders(
+    sim: BohemiansArenaSimulator,
+    roles: Tuple[str, ...],
+    count: int,
+    busy_until: int,
+    camp_idx: Optional[int] = None,
+) -> int:
+    pulled = 0
+    for r in roles:
+        for v in sim.vils:
+            if v["role"] == r and int(v["busy_until"]) <= sim.time_s and pulled < count:
+                v["busy_until"] = busy_until
+                if camp_idx is not None:
+                    v["camp_idx"] = camp_idx
+                pulled += 1
+    return pulled
+
+
+def run_bohemians_1tc_fast_hc(
+    delay_fn: Optional[Callable[[int], int]] = None,
+    chicken_override: Optional[int] = None,
+    record_outputs: bool = True,
+    castle_rams: int = 0,
+) -> Tuple[BuildOrderDocument, Dict[str, object]]:
+    """Runs a 1-second simulation for the 24+2 1-TC Fast Hand Cannoneer build."""
+    dark_vils = 24
+    sim = BohemiansArenaSimulator(dark_vils=dark_vils, chicken_count=chicken_override)
+    rules = sim.rules
+    planner = BackwardPlanner(sim.db, rules)
+
+    def d_t(planned_t: int) -> int:
+        return planned_t if delay_fn is None else delay_fn(planned_t)
+
+    variant_label = (
+        "24+2 1-TC Fast Hand Cannons -> 3 Ranges, Mangonels, Pikes, TC #2/#3, Fwd Castle & Imp"
+    )
+
+    rows: List[DetailedBuildRow] = []
+    resource_timeline: List[Dict[str, object]] = []
+    milestones: Dict[str, object] = {
+        "strategy": "24p2_1tc_fast_hc",
+        "variant": variant_label,
+        "dark_vils": dark_vils,
+        "castle_click_vils": dark_vils + 2,
+    }
+
+    def current_army_dict() -> Dict[str, int]:
+        pike_key = (
+            "halberdier"
+            if "halberdier" in sim.upgrades
+            else ("pikeman" if "pikeman" in sim.upgrades else "spearman")
+        )
+        out: Dict[str, int] = {"scout": sim.military_units["scout"]}
+        if sim.military_units["hand_cannoneer"] > 0:
+            out["hand_cannoneer"] = sim.military_units["hand_cannoneer"]
+        if sim.military_units["mangonel"] > 0:
+            out["mangonel"] = sim.military_units["mangonel"]
+        if sim.military_units["battering_ram"] > 0:
+            out["battering_ram"] = sim.military_units["battering_ram"]
+        if sim.military_units["pikeman"] > 0:
+            out[pike_key] = sim.military_units["pikeman"]
+        if sim.military_units["monk"] > 0:
+            out["monk"] = sim.military_units["monk"]
+        if sim.military_units["trebuchet"] > 0:
+            out["trebuchet"] = sim.military_units["trebuchet"]
+        return out
+
+    def record_timeline_point() -> None:
+        if not record_outputs:
+            return
+        army_d = current_army_dict()
+        resource_timeline.append(
+            {
+                "t": sim.time_s,
+                "ts": sim.fmt_time(),
+                "food": round(sim.bank.food),
+                "wood": round(sim.bank.wood),
+                "gold": round(sim.bank.gold),
+                "stone": round(sim.bank.stone),
+                "vils": len(sim.vils),
+                "mil": sum(army_d.values()),
+                "army": format_army_counts(army_d),
+            }
+        )
+
+    def add_row(pop_str: str, time_str: str, phase: str, action: str, notes: str = "") -> None:
+        if not record_outputs:
+            return
+        alloc = sim.current_macro_alloc()
+        fb = sim.current_food_breakdown()
+        rows.append(
+            DetailedBuildRow(
+                pop=pop_str,
+                timestamp=time_str,
+                age=phase,
+                action=action,
+                food_vils=alloc["food"],
+                wood_vils=alloc["wood"],
+                gold_vils=alloc["gold"],
+                stone_vils=alloc["stone"],
+                bank_food=sim.bank.food,
+                bank_wood=sim.bank.wood,
+                bank_gold=sim.bank.gold,
+                bank_stone=sim.bank.stone,
+                notes=notes,
+                sheep_vils=fb["sheep"],
+                boar_vils=fb["boar"],
+                deer_vils=fb["deer"],
+                chicken_vils=fb["chicken"],
+                berry_vils=fb["berries"],
+                farm_vils=fb["farm"],
+                army_counts=current_army_dict(),
+            )
+        )
+        record_timeline_point()
+
+    feudal_cost, feudal_time, _ = sim.db.get_age_advance_spec(2, "Bohemians")
+    castle_cost, castle_time, _ = sim.db.get_age_advance_spec(3, "Bohemians")
+    imp_cost, imp_time, _ = sim.db.get_age_advance_spec(4, "Bohemians")
+    bs_cost, bs_build_time = sim.db.get_unit_or_building_spec("blacksmith", "Bohemians", 2)
+    univ_cost, univ_build_time = sim.db.get_unit_or_building_spec("university", "Bohemians", 3)
+
+    # t = 0:00 start (rule 1.5)
+    sim.spend(ResourceBundle(food=50), "vil_4")
+    sim.tc_busy_until[0] = 25
+    sim.tc_action[0] = "vil_4"
+    record_timeline_point()
+
+    # Dark / Feudal state
+    boar1_arrive_t: Optional[int] = None
+    boar1_shot = False
+    boar2_lured = False
+    boar2_arrive_t: Optional[int] = None
+    boar2_shot = False
+    sheep_post_logged = False
+
+    ld_gold_done = False
+    ld_gold_vil_id: Optional[int] = None
+    feudal_clicked = False
+    feudal_click_t = 0
+    feudal_cmd_t: Optional[int] = None
+    feudal_vils_queued = 0
+    market_started = False
+    market_ready_t: Optional[int] = None
+    bs_started = False
+    bs_ready_t: Optional[int] = None
+    stone_sold = False
+    gold_mc_started = False
+    castle_clicked = False
+    castle_click_t = 0
+    castle_cmd_t: Optional[int] = None
+    castle_reached_t: Optional[int] = None
+
+    dba_started = False
+    hc_started = False
+    bow_saw_started = False
+    lc2_built = False
+
+    tc2_started = False
+    tc2_ready_t: Optional[int] = None
+    tc3_started = False
+    tc3_ready_t: Optional[int] = None
+
+    wheelbarrow_started = False
+    hand_cart_started = False
+    loom_started = False
+
+    univ_started = False
+    univ_ready_t: Optional[int] = None
+    chemistry_started = False
+    chemistry_ready_t: Optional[int] = None
+    chemistry_logged = False
+    first_hc_t: Optional[int] = None
+
+    barracks_started = False
+    barracks_ready_t: Optional[int] = None
+    rax_busy_until = 0
+    pikeman_upg_started = False
+    halberdier_upg_started = False
+
+    ranges_started = 0
+    range_ready_times: List[int] = []
+    range_busy_until: List[int] = [0, 0, 0]
+
+    sw_started = False
+    sw_ready_t: Optional[int] = None
+    sw_busy_until = 0
+
+    monastery_started = False
+    monastery_ready_t: Optional[int] = None
+    monastery_busy_until = 0
+    monks_trained = 0
+    relic1_time: Optional[int] = None
+
+    padded_armor_started = False
+    leather_armor_started = False
+    ring_armor_started = False
+
+    stone_ramp_started = False
+    fwd_vils_dispatched = False
+    fwd_vils_arrive_t: Optional[int] = None
+    fwd_vils: List[Dict[str, object]] = []
+    fwd_castle_started = False
+    fwd_castle_ready_t: Optional[int] = None
+    castle_busy_until = 0
+
+    wagenburg_started = False
+    siege_engineers_started = False
+    conscription_started = False
+    imp_prep_started = False
+    imp_hold_start_t: Optional[int] = None
+    imp_clicked = False
+    imp_click_t = 0
+    imp_reached_t: Optional[int] = None
+
+    last_market_trade_t = -999
+    last_lc_refresh_t = -999
+    mil_loop_logged = False
+    tc_expand_logged = False
+    fwd_loop_logged = False
+
+    housed_seconds = 0
+    tc_pre_click_idle_s = 0
+    tc_unplanned_idle_s = 0
+    max_castle_float = {"food": 0.0, "wood": 0.0, "gold": 0.0}
+
+    def queue_upg(
+        name: str,
+        extra_check: bool = True,
+        res_food: float = 0.0,
+        res_wood: float = 0.0,
+        res_gold: float = 0.0,
+    ) -> bool:
+        if not extra_check:
+            return False
+        c, rt = sim.db.get_upgrade_spec(name, "Bohemians")
+        if (
+            sim.bank.food >= c.food + res_food
+            and sim.bank.wood >= c.wood + res_wood
+            and sim.bank.gold >= c.gold + res_gold
+            and sim.bank.stone >= c.stone
+        ):
+            sim.spend(c, f"upgrade:{name}")
+            sim.queue_upgrade(name, sim.time_s + int(round(rt)))
+            return True
+        return False
+
+    max_sim_t = 2800
+    for t in range(1, max_sim_t + 1):
+        sim.time_s = t
+        sim.in_age_transition = (
+            (feudal_clicked and sim.age == 1)
+            or (castle_clicked and sim.age == 2)
+            or (imp_clicked and sim.age == 3)
+        )
+
+        # Track TC #1 idle time prior to Imperial Click (rules 5.1, 5.3)
+        if not imp_clicked and sim.tc_action[0] == "idle":
+            if (
+                (sim.age == 1 and len(sim.vils) == dark_vils and not feudal_clicked)
+                or (sim.age == 2 and feudal_vils_queued == 2 and not castle_clicked)
+                or (sim.age >= 3 and imp_hold_start_t is not None)
+            ):
+                tc_pre_click_idle_s += 1
+            else:
+                tc_unplanned_idle_s += 1
+            sim.tc1_idle_before_imp_s = tc_pre_click_idle_s + tc_unplanned_idle_s
+
+        # Boar #1 arrival -> garrison 7 TC vils 5s (rule 3.7)
+        if boar1_arrive_t is not None and not boar1_shot and t >= boar1_arrive_t:
+            boar1_shot = True
+            _pull_builders(sim, ("sheep", "boar"), rules.boar_garrison_vils, t + int(rules.boar_garrison_seconds))
+            if sim.active_carcass_food["sheep"] <= 40.0:
+                kept_one = False
+                for v in sim.vils:
+                    if v["role"] == "sheep":
+                        if not kept_one and sim.active_carcass_food["sheep"] > 5.0:
+                            kept_one = True
+                        else:
+                            v["role"] = "boar"
+                            v["busy_until"] = max(int(v["busy_until"]), t + int(rules.tc_food_switch_walk_time))
+
+        # Boar #2 lured dynamically so it arrives right as Boar #1 runs out (rule 3.7)
+        if boar1_shot and not boar2_lured and sim.remaining_animals["boar"] >= 1:
+            n_boar = max(1, sim.count_role("boar"))
+            boar_rate = n_boar * sim.db.get_gather_rate("boar", civ=sim.civ, rules=rules) + 0.40
+            if sim.remaining_animals["boar"] == 1 and sim.active_carcass_food["boar"] <= boar_rate * 32.0:
+                boar2_lured = True
+                lure_t = d_t(t)
+                for v in sim.vils:
+                    if v["role"] == "boar":
+                        v["busy_until"] = max(
+                            int(v["busy_until"]), lure_t + int(2 * rules.boar_lure_walk_time_one_way)
+                        )
+                        boar2_arrive_t = lure_t + int(2 * rules.boar_lure_walk_time_one_way)
+                        break
+
+        if boar2_arrive_t is not None and not boar2_shot and t >= boar2_arrive_t:
+            boar2_shot = True
+            _pull_builders(sim, ("boar", "sheep"), rules.boar_garrison_vils, t + int(rules.boar_garrison_seconds))
+
+        # Relic #1 garrisoned by Monk #1 (rule 7.3 -> +0.5G/s = +30G/min)
+        if relic1_time is not None and t >= relic1_time and sim.relics_garrisoned < 1:
+            sim.relics_garrisoned = 1
+            milestones["relic1_str"] = sim.fmt_time(t)
+
+        # Long-distance 10 Gold completion -> return villager to Stragglers/Wood once >= 110.2G
+        if not ld_gold_done and ld_gold_vil_id is not None and sim.bank.gold >= 110.2:
+            ld_gold_done = True
+            milestones["ld_gold_done_str"] = sim.fmt_time(t)
+            for v in sim.vils:
+                if v["id"] == ld_gold_vil_id:
+                    v["role"] = "straggler"
+                    v["busy_until"] = t + int(rules.straggler_walk_time)
+                    break
+
+        # Check TC completions
+        for tc_idx in range(sim.tc_count):
+            if t == sim.tc_busy_until[tc_idx] and sim.tc_action[tc_idx] != "idle":
+                act = sim.tc_action[tc_idx]
+                sim.tc_action[tc_idx] = "idle"
+
+                if act.startswith("vil_"):
+                    vid = len(sim.vils) + 1
+                    if sim.age == 1:
+                        if vid in (4, 5, 6):
+                            sim.vils.append({"id": vid, "role": "sheep", "busy_until": t})
+                            if vid == 6:
+                                add_row(
+                                    "3–6 (4–7)",
+                                    f"00:00 – {sim.fmt_time()}",
+                                    "Dark Age",
+                                    "Vils #1–#6 (6 vils) -> Build 2 Houses (-50W), then all 6 on Sheep under TC.",
+                                    "Start 200F, 200W, 100G, 200S; +2 Sheep at 1:30 & 2:30 (rule 1.3).",
+                                )
+                        elif vid == 7:
+                            sim.spend(ResourceBundle(wood=100), "LC1")
+                            comp_t = t + int(rules.camp_or_berry_walk_time_one_way) + 35
+                            lc1_idx = sim.add_lumber_camp(comp_t)
+                            sim.vils.append({"id": vid, "role": "wood", "camp_idx": lc1_idx, "busy_until": comp_t})
+                        elif vid in (8, 9):
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "wood",
+                                    "camp_idx": 0,
+                                    "busy_until": t + int(rules.camp_or_berry_walk_time_one_way),
+                                }
+                            )
+                            if vid == 9:
+                                add_row(
+                                    "7–9 (8–10)",
+                                    f"01:40 – {sim.fmt_time()}",
+                                    "Dark Age",
+                                    "Vils #7–#9 (3 vils) -> Wood (1st vil walks 15s + builds Lumber Camp #1 [-100W, 35s], then all 3 on Wood).",
+                                    "LC #1 completes at 02:30; wood decay -1% per 20s down to 60% floor (rule 3.4).",
+                                )
+                        elif vid == 10:
+                            lure_start = d_t(t)
+                            boar1_arrive_t = lure_start + int(2 * rules.boar_lure_walk_time_one_way)
+                            sim.vils.append({"id": vid, "role": "boar", "busy_until": boar1_arrive_t})
+                            add_row(
+                                "10 (11)",
+                                sim.fmt_time(),
+                                "Dark Age",
+                                "Vil #10 -> Lure Boar #1 (15s out + 15s back).",
+                                f"Boar #1 arrives {sim.fmt_time(boar1_arrive_t)} -> garrison 7 TC vils 5s (rule 3.7).",
+                            )
+                        elif vid == 11:
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "wood",
+                                    "camp_idx": 0,
+                                    "busy_until": t + int(rules.camp_or_berry_walk_time_one_way),
+                                }
+                            )
+                            add_row("11 (12)", sim.fmt_time(), "Dark Age", "Vil #11 -> Wood at LC #1 (15s walk; 4 on Wood).", "")
+                        elif vid == 12:
+                            sim.spend(ResourceBundle(wood=100), "ChickenMill")
+                            cmill_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
+                            sim.add_building("mill", cmill_comp)
+                            sim.vils.append({"id": vid, "role": "chicken_mill", "busy_until": cmill_comp})
+                        elif vid == 13:
+                            sim.spend(ResourceBundle(wood=25), "House3")
+                            comp_t = t + int(rules.house_walk_time_one_way) + 25
+                            sim.add_pending_pop_building(comp_t, 5, "house")
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "chicken_mill",
+                                    "busy_until": comp_t + int(rules.camp_or_berry_walk_time_one_way),
+                                }
+                            )
+                        elif vid in (14, 15):
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "chicken_mill",
+                                    "busy_until": t + int(rules.camp_or_berry_walk_time_one_way),
+                                }
+                            )
+                            if vid == 15:
+                                add_row(
+                                    "12–15 (13–16)",
+                                    f"03:45 – {sim.fmt_time()}",
+                                    "Dark Age",
+                                    "Vils #12–#15 (4 vils) -> 6 Chickens on Mill #1 (Vil #12 walks 15s + builds Mill [-100W, 35s]; Vil #13 builds House #3 [-25W] -> joins Chickens).",
+                                    "Mill #1 on Chickens (23.9/min) unlocks Horse Collar & Farms (rules 3.9, 3.10); 2nd Boar lured before 1st finishes.",
+                                )
+                        elif vid == 16:
+                            sim.spend(ResourceBundle(wood=100), "BerryMill")
+                            bmill_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
+                            sim.add_building("mill", bmill_comp)
+                            sim.vils.append({"id": vid, "role": "berries", "busy_until": bmill_comp})
+                        elif vid == 17:
+                            sim.vils.append({"id": vid, "role": "berries", "busy_until": t + 15})
+                        elif vid == 18:
+                            sim.spend(ResourceBundle(wood=25), "House4")
+                            comp_t = t + 30
+                            sim.add_pending_pop_building(comp_t, 5, "house")
+                            sim.vils.append({"id": vid, "role": "berries", "busy_until": comp_t + 15})
+                        elif vid == 19:
+                            sim.vils.append({"id": vid, "role": "berries", "busy_until": t + 15})
+                            add_row(
+                                "16–19 (17–20)",
+                                f"05:25 – {sim.fmt_time()}",
+                                "Dark Age",
+                                "Vils #16–#19 (4 vils) -> Berries at Mill #2 (1st builds Berry Mill [-100W, 50s], 3rd builds House #4 [-25W], all 4 on Berries).",
+                                "Both Mills affordable in Dark Age for FC (rule 3.9); 4/4 on Berries.",
+                            )
+                        elif vid in (20, 21):
+                            sim.vils.append({"id": vid, "role": "wood", "camp_idx": 0, "busy_until": t + 15})
+                            if vid == 21:
+                                add_row(
+                                    "20–21 (21–22)",
+                                    f"07:05 – {sim.fmt_time()}",
+                                    "Dark Age",
+                                    "Vils #20–#21 (2 vils) -> Wood at LC #1 (15s walk; 6 on Wood).",
+                                    "Skip Dark Age Gold MC (-100W saved); long-distance 10G + sell 100S keeps +200W in Feudal!",
+                                )
+                        elif vid == 22:
+                            sim.spend(ResourceBundle(wood=25), "House5")
+                            comp_t = t + 30
+                            sim.add_pending_pop_building(comp_t, 5, "house")
+                            sim.vils.append({"id": vid, "role": "wood", "camp_idx": 0, "busy_until": comp_t + 15})
+                        elif vid == 23:
+                            if sim.active_carcass_food["sheep"] > 10.0 or sim.remaining_animals["sheep"] > 0:
+                                sim.vils.append(
+                                    {
+                                        "id": vid,
+                                        "role": "sheep",
+                                        "busy_until": t + int(rules.tc_food_switch_walk_time),
+                                    }
+                                )
+                            else:
+                                sim.vils.append({"id": vid, "role": "wood", "camp_idx": 0, "busy_until": t + 15})
+                        elif vid == 24:
+                            # Vil #24 long-distance mines 10 Gold before Market completes (rule 3.3)
+                            ld_gold_vil_id = vid
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "gold_ld",
+                                    "busy_until": t + int(rules.camp_or_berry_walk_time_one_way),
+                                }
+                            )
+                            add_row(
+                                "22–24 (23–25)",
+                                f"07:55 – {sim.fmt_time()}",
+                                "Dark Age",
+                                "Vils #22–#24 (3 vils) -> Vil #22 builds House #5 [-25W] -> LC #1 (7 on Wood); Vil #23 -> Sheep/Food; Vil #24 -> Long-distance Gold (10G -> return ~09:57).",
+                                "Long-distance 10G (rule 3.3) reaches 110G so selling 100 Stone at Market (+91G) hits 201G without wasting 200 Wood!",
+                            )
+
+                        if vid < dark_vils and sim.bank.food >= 50:
+                            sim.spend(ResourceBundle(food=50), f"vil_{vid+1}")
+                            sim.tc_busy_until[0] = t + 25
+                            sim.tc_action[0] = f"vil_{vid+1}"
+
+                    elif sim.age == 2:
+                        sim.vils.append(
+                            {
+                                "id": vid,
+                                "role": "wood",
+                                "camp_idx": max(0, len(sim.lumber_camps) - 1),
+                                "busy_until": t + 15,
+                            }
+                        )
+                        if vid == dark_vils + 2:
+                            add_row(
+                                f"{dark_vils+1}–{dark_vils+2} ({dark_vils+2}–{dark_vils+3})",
+                                f"{sim.fmt_time(t-25)} – {sim.fmt_time()}",
+                                "Feudal Age",
+                                f"Vils #{dark_vils+1}–#{dark_vils+2} (2 vils) -> Wood; sell 100 Stone at Market (+91G -> 201G total!).",
+                                "Keep +200W by selling 100S (+91G) + 10G long-distance (keeping 100S for TC #2 later!).",
+                            )
+
+                    else:
+                        # Castle & Imperial villager routing (prioritize Wood & Farms early so Ranges/SW/TCs drop fast!)
+                        g_cnt = sim.count_role("gold")
+                        w_cnt = sim.count_role("wood", "straggler")
+                        f_cnt = sim.count_role("farm")
+                        s_cnt = sim.count_role("stone")
+                        cur_camp = max(0, len(sim.lumber_camps) - 1)
+
+                        saving_for_bldg = (
+                            (not univ_started and sim.bank.wood < int(univ_cost.wood))
+                            or (not barracks_started and sim.bank.wood < 175)
+                            or (barracks_started and ranges_started < 1 and sim.bank.wood < 175)
+                            or (chemistry_started and not monastery_started and sim.bank.wood < 175)
+                            or (first_hc_t is not None and monastery_started and ranges_started < 3 and sim.bank.wood < 175)
+                            or (first_hc_t is not None and ranges_started >= 2 and not sw_started and sim.bank.wood < 200)
+                            or (ranges_started >= 3 and sw_started and not tc3_started and sim.bank.wood < 275)
+                        )
+                        farm_t1 = 15 if first_hc_t is None else (34 if not imp_clicked else 48)
+                        wood_t1 = 14 if first_hc_t is None else (20 if not imp_clicked else 26)
+                        # Keep Gold miners tight so we don't float Gold!
+                        if first_hc_t is None:
+                            gold_t1 = 4 if sim.bank.gold < 320 else 3
+                        elif not imp_clicked:
+                            gold_t1 = 6 if sim.bank.gold > 500 else (10 if not imp_prep_started else 14)
+                        else:
+                            gold_t1 = 20
+
+                        need_castle_stone = 660 if not tc2_started else (760 if not tc3_started else 660)
+                        stone_t = 7 if (stone_ramp_started and not fwd_castle_started and sim.bank.stone < need_castle_stone) else 0
+
+                        if f_cnt < 12 and sim.bank.wood >= 60 and not saving_for_bldg:
+                            sim.spend(ResourceBundle(wood=60), "farm_new")
+                            sim.register_new_farm(t + int(rules.farm_walk_time) + 15)
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "farm",
+                                    "busy_until": t + int(rules.farm_walk_time) + 15,
+                                }
+                            )
+                        elif stone_t > 0 and s_cnt < stone_t:
+                            sim.vils.append({"id": vid, "role": "stone", "busy_until": t + 15})
+                        elif w_cnt < wood_t1:
+                            sim.vils.append({"id": vid, "role": "wood", "camp_idx": cur_camp, "busy_until": t + 15})
+                        elif f_cnt < farm_t1 and sim.bank.wood >= 60 and not saving_for_bldg and sim.bank.food < 1150:
+                            sim.spend(ResourceBundle(wood=60), "farm_new")
+                            sim.register_new_farm(t + int(rules.farm_walk_time) + 15)
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "farm",
+                                    "busy_until": t + int(rules.farm_walk_time) + 15,
+                                }
+                            )
+                        elif g_cnt < gold_t1 and sim.bank.gold < (950 if imp_prep_started else 600):
+                            sim.vils.append({"id": vid, "role": "gold", "busy_until": t + 15})
+                        else:
+                            sim.vils.append(
+                                {
+                                    "id": vid,
+                                    "role": "wood" if (sim.bank.gold >= 600 or g_cnt >= gold_t1) else "gold",
+                                    "camp_idx": cur_camp,
+                                    "busy_until": t + 15,
+                                }
+                            )
+
+                elif act == "feudal":
+                    sim.age = 2
+                    sim.upgrades.update({"gold mining", "stone mining"})
+                    milestones["feudal_reached_s"] = t
+                    milestones["feudal_reached_str"] = sim.fmt_time()
+
+                    if sim.bank.food >= 50:
+                        sim.spend(ResourceBundle(food=50), "feudal_vil1")
+                        sim.tc_busy_until[0] = t + 25
+                        sim.tc_action[0] = f"vil_{len(sim.vils)+1}"
+                        feudal_vils_queued = 1
+
+                    # Market (175W, 3 builders -> 36s) & Bohemian Blacksmith (50W, 1 builder -> 40s)
+                    if sim.bank.wood >= (175 + int(bs_cost.wood)):
+                        market_started = True
+                        bs_started = True
+                        sim.spend(ResourceBundle(wood=175 + bs_cost.wood), "Market+Blacksmith")
+                        mkt_build = int(round(calc_construction_time(60.0, 3)))
+                        market_ready_t = t + 10 + mkt_build
+                        bs_ready_t = t + 10 + int(bs_build_time)
+                        _pull_builders(sim, ("straggler", "wood", "berries"), 3, market_ready_t + 10)
+                        _pull_builders(sim, ("straggler", "wood", "berries"), 1, bs_ready_t + 10)
+                        add_row(
+                            f"{len(sim.vils)} ({sim.total_pop()})",
+                            sim.fmt_time(),
+                            "Feudal Age",
+                            f"REACHED FEUDAL AGE! Free Gold/Stone Mining (+15%); Queue +2 Feudal Vils; 3 vils build Market (-175W, {mkt_build}s) & 1 vil builds Bohemian Blacksmith (-{bs_cost.wood:.0f}W, 40s).",
+                            "Bohemians save 100W on Blacksmith + Mining Camp techs; 110G ready -> sell 100S for +91G (saving 200W!).",
+                        )
+
+                elif act == "castle":
+                    sim.age = 3
+                    sim.upgrades.update({"gold shaft mining", "stone shaft mining"})
+                    castle_reached_t = t
+                    milestones["castle_reached_s"] = t
+                    milestones["castle_reached_str"] = sim.fmt_time()
+                    milestones["castle_arrival_bank"] = sim.bank.to_dict()
+                    milestones["castle_arrival_alloc"] = sim.current_macro_alloc()
+
+                    add_row(
+                        f"{len(sim.vils)} ({sim.total_pop()})",
+                        f"{sim.fmt_time(castle_click_t)} – {sim.fmt_time()}",
+                        "Castle Transition",
+                        "Castle Transition Macro (160s): Research Double-Bit Axe (-100F, -50W) & Horse Collar (-75F, -75W), build Gold Mining Camp (-100W, 4 vils on Gold) & Barracks (-175W) early using the 200W saved!",
+                        "Barracks & Gold MC complete during Castle Transition so University + Range #1 drop immediately at 14:26!",
+                    )
+
+                    if sim.bank.food >= 50:
+                        sim.spend(ResourceBundle(food=50), "castle_vil1")
+                        sim.tc_busy_until[0] = t + 25
+                        sim.tc_action[0] = f"vil_{len(sim.vils)+1}"
+
+                    bow_note = ""
+                    if sim.bank.food >= 200 and sim.bank.wood >= 100 and queue_upg("bow saw", res_food=50):
+                        bow_saw_started = True
+                        bow_note = "Bow Saw (-150F, -100W)"
+
+                    univ_note = ""
+                    if not univ_started and sim.bank.wood >= int(univ_cost.wood):
+                        univ_started = True
+                        sim.spend(univ_cost, "University")
+                        univ_ready_t = t + 10 + int(univ_build_time)
+                        sim.add_building("university", univ_ready_t)
+                        _pull_builders(sim, ("straggler", "wood"), 1, univ_ready_t + 10)
+                        milestones["univ_ready_str"] = sim.fmt_time(univ_ready_t)
+                        univ_note = f" + Bohemian University (-{univ_cost.wood:.0f}W -> ready {sim.fmt_time(univ_ready_t)})"
+
+                    range1_note = ""
+                    if barracks_ready_t is not None and t >= barracks_ready_t and ranges_started == 0 and sim.bank.wood >= 175:
+                        ranges_started = 1
+                        sim.spend(ResourceBundle(wood=175), "Range1")
+                        r_ready = t + 10 + 50
+                        range_ready_times.append(r_ready)
+                        sim.add_building("archery range", r_ready)
+                        _pull_builders(sim, ("straggler", "wood"), 1, r_ready + 10)
+                        milestones["range1_ready_str"] = sim.fmt_time(r_ready)
+                        range1_note = f" + Range #1 (-175W -> ready {sim.fmt_time(r_ready)})"
+
+                    add_row(
+                        f"{len(sim.vils)} ({sim.total_pop()})",
+                        sim.fmt_time(),
+                        "Castle Age",
+                        f"REACHED CASTLE AGE (1 TC Fast HC)! Free Gold/Stone Shaft Mining (+15%); drop {bow_note}{univ_note}{range1_note}; stay 1 TC & 1 Range until Hand Cannons start!",
+                        "90% Castle+ macro efficiency buffer active (rule 8.2).",
+                    )
+
+                elif act == "loom":
+                    sim.upgrades.add("loom")
+                    milestones["loom_done_str"] = sim.fmt_time(t)
+
+                elif act == "wheelbarrow":
+                    sim.upgrades.add("wheelbarrow")
+                    milestones["wheelbarrow_done_str"] = sim.fmt_time(t)
+
+                elif act == "hand_cart":
+                    sim.upgrades.add("hand cart")
+                    milestones["hand_cart_done_str"] = sim.fmt_time(t)
+
+                elif act == "imperial":
+                    sim.age = 4
+                    imp_reached_t = t
+                    milestones["imp_reached_s"] = t
+                    milestones["imp_reached_str"] = sim.fmt_time(t)
+                    milestones["imp_arrival_bank"] = sim.bank.to_dict()
+                    milestones["imp_arrival_army"] = current_army_dict()
+
+                    add_row(
+                        f"{len(sim.vils)} ({sim.total_pop()})",
+                        f"{sim.fmt_time(imp_click_t)} – {sim.fmt_time()}",
+                        "Imperial Transition",
+                        "Imperial Transition (190s): Mass 3-Range Hand Cannoneers + Mangonels + Pikemen, finish Forward Castle (-650S), and scale toward ~90–100 vils for Imperial push.",
+                        f"Arrives Imperial Age at {sim.fmt_time()} (target <40:00 per rule 6.5).",
+                    )
+
+                    if sim.bank.food >= 150 and sim.bank.gold >= 150:
+                        conscription_started = True
+                        sim.spend(ResourceBundle(food=150, gold=150), "Conscription")
+                        sim.queue_upgrade("conscription", t + 60)
+
+                    add_row(
+                        f"{len(sim.vils)} ({sim.total_pop()})",
+                        sim.fmt_time(),
+                        "Imperial Age",
+                        "REACHED IMPERIAL AGE! Research Conscription (-150F, -150G), Ring Archer Armor (-250F, -250G), Halberdier (-300F, -600G), Siege Engineers (-500F, -600W), & Wagenburg Tactics (-300F, -300G); train Trebuchets (-200W, -200G) from Forward Castle!",
+                        f"Bank on Imp arrival: {sim.bank.food:.0f}F / {sim.bank.wood:.0f}W / {sim.bank.gold:.0f}G / {sim.bank.stone:.0f}S.",
+                    )
+
+        # Click Feudal Age (rule 5.1 <= 5s buffer)
+        if sim.age == 1 and not feudal_clicked and sim.tc_action[0] == "idle" and len(sim.vils) == dark_vils:
+            if feudal_cmd_t is None and sim.bank.can_afford(feudal_cost):
+                feudal_cmd_t = d_t(t)
+            if feudal_cmd_t is not None and t >= feudal_cmd_t and sim.bank.can_afford(feudal_cost):
+                feudal_clicked = True
+                feudal_click_t = t
+                sim.feudal_clicked = True
+                milestones["feudal_click_s"] = t
+                milestones["feudal_click_str"] = sim.fmt_time(t)
+                sim.spend(feudal_cost, "FeudalClick")
+                sim.tc_busy_until[0] = t + int(feudal_time)
+                sim.tc_action[0] = "feudal"
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    sim.fmt_time(),
+                    "Feudal Transition",
+                    f"CLICK FEUDAL AGE (-500F, 130s, {tc_pre_click_idle_s}s TC idle)!",
+                    f"Reaches Feudal Age at {sim.fmt_time(t + int(feudal_time))}.",
+                )
+
+        # Feudal Transition: Sheep #8 finishes -> Stragglers + Farms (8 Farms!)
+        if (
+            not sheep_post_logged
+            and feudal_clicked
+            and sim.age == 1
+            and sim.undiscovered_sheep == 0
+            and sim.remaining_animals["sheep"] == 0
+            and sim.active_carcass_food["sheep"] <= 1e-6
+        ):
+            sheep_post_logged = True
+            for v in sim.vils:
+                if v["role"] in ("straggler", "sheep") and int(v["busy_until"]) <= t:
+                    v["role"] = "straggler"
+                    v["busy_until"] = t + int(rules.straggler_walk_time)
+            add_row(
+                f"{len(sim.vils)} ({sim.total_pop()})",
+                sim.fmt_time(),
+                "Feudal Transition",
+                "Sheep #8 finishes under TC: move TC vils to Stragglers & seed up to 8 Farms (-60W each) keeping 225W for Market + Bohemian Blacksmith (50W).",
+                "No 200W Market sale reserve needed (selling 100S instead!) -> extra Farms + early Barracks/Univ!",
+            )
+
+        if sheep_post_logged and not castle_clicked and sim.farms_seeded < 8 and sim.has_building("mill"):
+            res_mb = (0 if market_started else 175) + (0 if bs_started else int(bs_cost.wood))
+            if sim.bank.wood >= (60 + res_mb):
+                for v in sim.vils:
+                    if v["role"] in ("straggler", "sheep", "wood") and int(v["busy_until"]) <= t:
+                        walk_t = (
+                            int(rules.camp_or_berry_walk_time_one_way)
+                            if v["role"] == "wood"
+                            else int(rules.farm_walk_time)
+                        )
+                        sim.spend(ResourceBundle(wood=60), "TransitionFarm")
+                        v["role"] = "farm"
+                        v["busy_until"] = t + walk_t + 15
+                        sim.register_new_farm(t + walk_t + 15)
+                        break
+
+        # Feudal Age: Queue 2nd Feudal villager
+        if sim.age == 2 and not castle_clicked and sim.tc_action[0] == "idle" and feudal_vils_queued == 1:
+            if sim.bank.food >= 50:
+                sim.spend(ResourceBundle(food=50), "feudal_vil2")
+                sim.tc_busy_until[0] = t + 25
+                sim.tc_action[0] = f"vil_{len(sim.vils)+1}"
+                feudal_vils_queued = 2
+
+        # Feudal Age Market trade: Sell 100 Stone for +91 Gold (110G + 91G = 201G, rule 7.2)
+        if (
+            market_ready_t is not None
+            and t >= market_ready_t
+            and not stone_sold
+            and sim.bank.stone >= 100
+            and sim.bank.gold >= 110
+            and sim.bank.gold < 200
+        ):
+            stone_sold = True
+            sim.sell_at_market("stone", 100)
+
+        # Click Castle Age
+        if (
+            sim.age == 2
+            and not castle_clicked
+            and feudal_vils_queued == 2
+            and sim.tc_action[0] == "idle"
+            and bs_ready_t is not None
+            and t >= bs_ready_t
+            and sim.bank.can_afford(castle_cost)
+        ):
+            if castle_cmd_t is None:
+                castle_cmd_t = d_t(t)
+            if t >= castle_cmd_t:
+                castle_clicked = True
+                castle_click_t = t
+                milestones["castle_click_s"] = t
+                milestones["castle_click_str"] = sim.fmt_time(t)
+                sim.spend(castle_cost, "CastleClick")
+                sim.tc_busy_until[0] = t + int(castle_time)
+                sim.tc_action[0] = "castle"
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    sim.fmt_time(),
+                    "Feudal Age",
+                    f"CLICK CASTLE AGE (-800F, -200G, 160s) at {len(sim.vils)+1} pop!",
+                    f"Reaches Castle Age at {sim.fmt_time(t + int(castle_time))} with {sim.bank.stone:.0f}S left in bank.",
+                )
+
+        # Castle Transition: DBA + HC + Gold MC (4 on Gold) + Barracks + Farms up to 10 while keeping 275W for Univ + Range #1!
+        if castle_clicked and sim.age == 2 and t >= castle_click_t + 1:
+            if not dba_started and queue_upg("double-bit axe"):
+                dba_started = True
+            if dba_started and not hc_started and queue_upg("horse collar"):
+                hc_started = True
+            if hc_started and not gold_mc_started and sim.bank.wood >= 100:
+                gold_mc_started = True
+                sim.spend(ResourceBundle(wood=100), "GoldMC")
+                sim.buildings.append("mining camp")
+                moved_g = 0
+                for v in sim.vils:
+                    if v["role"] in ("wood", "straggler") and int(v["busy_until"]) <= t and moved_g < 4:
+                        v["role"] = "gold"
+                        v["busy_until"] = (t + 50) if moved_g == 0 else (t + 15)
+                        moved_g += 1
+            if gold_mc_started and not barracks_started and sim.bank.wood >= (175 + int(univ_cost.wood)):
+                barracks_started = True
+                sim.spend(ResourceBundle(wood=175), "Barracks")
+                barracks_ready_t = t + 10 + 50
+                sim.add_building("barracks", barracks_ready_t)
+                _pull_builders(sim, ("wood", "straggler"), 1, barracks_ready_t + 10)
+            if barracks_started and sim.farms_seeded < 10 and sim.bank.wood >= (60 + int(univ_cost.wood) + 175):
+                for v in sim.vils:
+                    if v["role"] in ("straggler", "wood") and int(v["busy_until"]) <= t:
+                        walk_t = (
+                            int(rules.farm_walk_time)
+                            if v["role"] == "straggler"
+                            else int(rules.camp_or_berry_walk_time_one_way)
+                        )
+                        sim.spend(ResourceBundle(wood=60), "CastleTransFarm")
+                        v["role"] = "farm"
+                        v["busy_until"] = t + walk_t + 15
+                        sim.register_new_farm(t + walk_t + 15)
+                        break
+
+        # Rule 4.4 House management (active from Castle click onwards)
+        house_wood_res = 0
+        if castle_clicked:
+            producing_mil = (
+                len(range_ready_times)
+                + (1 if sw_ready_t and t >= sw_ready_t else 0)
+                + (1 if barracks_ready_t and t >= barracks_ready_t else 0)
+            )
+            extra_tcs = max(0, sim.tc_count - 1)
+            need_house_room = sim.house_threshold(producing_mil, extra_tcs) + (4 if (producing_mil + extra_tcs) >= 4 else 2)
+            pending_houses = sum(1 for _, p in sim.pending_pop_buildings if p == 5)
+            pending_house_pop = pending_houses * 5
+            projected_free = sim.pop_cap() + pending_house_pop - sim.total_pop()
+            house_waiting_wood = (
+                projected_free <= need_house_room
+                and pending_houses < 4
+                and (sim.pop_cap() + pending_house_pop) < 200
+            )
+            if house_waiting_wood and sim.bank.wood >= 25:
+                if sim.age >= 3 or projected_free <= 5:
+                    sim.spend(ResourceBundle(wood=25), "House")
+                    comp_t = t + int(rules.house_walk_time_one_way) + 25
+                    sim.add_pending_pop_building(comp_t, 5, "house")
+                    _pull_builders(sim, ("wood", "straggler", "farm"), 1, comp_t + int(rules.house_walk_time_one_way))
+                    house_waiting_wood = False
+            house_wood_res = 25 if house_waiting_wood else 0
+
+        # === CASTLE AGE & IMPERIAL AGE ===
+        if sim.age >= 3:
+            if sim.age == 3 and not imp_clicked:
+                max_castle_float["food"] = max(max_castle_float["food"], sim.bank.food)
+                max_castle_float["wood"] = max(max_castle_float["wood"], sim.bank.wood)
+                max_castle_float["gold"] = max(max_castle_float["gold"], sim.bank.gold)
+
+            if not bow_saw_started and queue_upg("bow saw", res_food=50 * sim.tc_count):
+                bow_saw_started = True
+
+            # Activate TCs on completion
+            if tc2_ready_t is not None and t == tc2_ready_t:
+                sim.tc_count += 1
+                sim.tc_busy_until.append(t)
+                sim.tc_action.append("idle")
+                milestones["tc2_ready_str"] = sim.fmt_time(t)
+            if tc3_ready_t is not None and t == tc3_ready_t:
+                sim.tc_count += 1
+                sim.tc_busy_until.append(t)
+                sim.tc_action.append("idle")
+                milestones["tc3_ready_str"] = sim.fmt_time(t)
+
+            f_cnt_now = sim.count_role("farm")
+            w_cnt_now = sim.count_role("wood", "straggler")
+            saving_for_imp = imp_prep_started and not imp_clicked
+
+            # TC Queue management FIRST (rules 4.3, 5.1-5.3: villager production takes priority over military/upgrades!)
+            for tc_idx in range(sim.tc_count):
+                if sim.tc_action[tc_idx] == "idle":
+                    can_click_imp = (
+                        imp_prep_started
+                        and not imp_clicked
+                        and tc_idx == 0
+                        and sim.bank.can_afford(imp_cost)
+                    )
+                    if can_click_imp:
+                        imp_clicked = True
+                        imp_click_t = t
+                        milestones["imp_click_s"] = t
+                        milestones["imp_click_str"] = sim.fmt_time(t)
+                        milestones["imp_click_vils"] = len(sim.vils)
+                        milestones["imp_click_alloc"] = sim.current_macro_alloc()
+                        milestones["imp_click_army"] = current_army_dict()
+                        sim.spend(imp_cost, "ImperialClick")
+                        sim.tc_busy_until[0] = t + int(imp_time)
+                        sim.tc_action[0] = "imperial"
+                        add_row(
+                            f"{len(sim.vils)} ({sim.total_pop()})",
+                            sim.fmt_time(),
+                            "Castle Age",
+                            f"CLICK IMPERIAL AGE (-1000F, -800G, 190s)! Army: {format_army_counts(current_army_dict()).replace('Army: ', '')}.",
+                            f"Reaches Imperial Age at {sim.fmt_time(t + int(imp_time))} (well before 40:00 per rule 6.5).",
+                        )
+                    elif tc_idx == 0 and not wheelbarrow_started and f_cnt_now >= 14 and first_hc_t is not None and not saving_for_imp and sim.bank.food >= 225 and sim.bank.wood >= (50 + house_wood_res):
+                        wheelbarrow_started = True
+                        sim.spend(ResourceBundle(food=175, wood=50), "Wheelbarrow")
+                        sim.tc_busy_until[0] = t + 75
+                        sim.tc_action[0] = "wheelbarrow"
+                    elif not loom_started and tc_idx == 0 and first_hc_t is not None and sim.bank.gold >= 100:
+                        loom_started = True
+                        sim.spend(ResourceBundle(gold=50), "Loom")
+                        sim.tc_busy_until[tc_idx] = t + 25
+                        sim.tc_action[tc_idx] = "loom"
+                    elif tc_idx == 0 and wheelbarrow_started and "wheelbarrow" in sim.upgrades and not hand_cart_started and tc3_started and not saving_for_imp and f_cnt_now >= 26 and sim.bank.food >= 520 and sim.bank.wood >= (200 + house_wood_res):
+                        hand_cart_started = True
+                        sim.spend(ResourceBundle(food=300, wood=200), "HandCart")
+                        sim.tc_busy_until[0] = t + 55
+                        sim.tc_action[0] = "hand_cart"
+                    else:
+                        max_vils_cap = 110 if not imp_clicked else 108
+                        in_flight_vils = sum(1 for a in sim.tc_action if a.startswith("vil_"))
+                        want_hold_imp = (
+                            tc_idx == 0
+                            and not imp_clicked
+                            and imp_prep_started
+                            and sim.bank.gold >= imp_cost.gold - 25
+                            and sim.bank.food >= imp_cost.food - 35
+                        )
+                        if want_hold_imp:
+                            if imp_hold_start_t is None:
+                                imp_hold_start_t = t
+                            hold_for_imp = (t - imp_hold_start_t) < int(rules.max_end_of_age_tc_idle_seconds)
+                        else:
+                            hold_for_imp = False
+                        if not hold_for_imp and (len(sim.vils) + in_flight_vils) < max_vils_cap:
+                            if sim.free_pop() <= 0:
+                                housed_seconds += 1
+                            elif sim.bank.food >= 50:
+                                imp_hold_start_t = None
+                                sim.spend(ResourceBundle(food=50), "vil_train")
+                                sim.tc_busy_until[tc_idx] = t + 25
+                                sim.tc_action[tc_idx] = f"vil_{len(sim.vils) + in_flight_vils + 1}"
+
+            # University (100W) + Chemistry (300F, 200G, 100s) + Barracks + Range #1 -> immediate 1-Range HC!
+            if not univ_started and sim.bank.wood >= (int(univ_cost.wood) + house_wood_res):
+                univ_started = True
+                sim.spend(univ_cost, "University")
+                univ_ready_t = t + 10 + int(univ_build_time)
+                sim.add_building("university", univ_ready_t)
+                _pull_builders(sim, ("wood", "farm"), 1, univ_ready_t + 10)
+                milestones["univ_ready_str"] = sim.fmt_time(univ_ready_t)
+
+            if univ_ready_t is not None and t >= univ_ready_t and not chemistry_started:
+                if queue_upg("chemistry", res_food=55):
+                    chemistry_started = True
+                    chemistry_ready_t = t + 100
+                    milestones["chemistry_started_str"] = sim.fmt_time(t)
+                    milestones["chemistry_done_str"] = sim.fmt_time(chemistry_ready_t)
+
+            if not barracks_started and sim.bank.wood >= (175 + house_wood_res):
+                barracks_started = True
+                sim.spend(ResourceBundle(wood=175), "Barracks")
+                barracks_ready_t = t + 10 + 50
+                sim.add_building("barracks", barracks_ready_t)
+                _pull_builders(sim, ("wood", "farm"), 1, barracks_ready_t + 10)
+
+            # Monastery (175W) builds right after Chemistry starts & Range #1 is placed (ahead of Range #2!) -> train 2 Monks (100G each) for Relic control + conversions!
+            if chemistry_started and ranges_started >= 1 and not monastery_started and sim.bank.wood >= (175 + house_wood_res):
+                monastery_started = True
+                sim.spend(ResourceBundle(wood=175), "Monastery")
+                monastery_ready_t = t + 10 + 40
+                sim.add_building("monastery", monastery_ready_t)
+                _pull_builders(sim, ("wood", "farm"), 1, monastery_ready_t + 10)
+                milestones["monastery_ready_str"] = sim.fmt_time(monastery_ready_t)
+
+            if (
+                monastery_ready_t is not None
+                and t >= monastery_ready_t
+                and first_hc_t is not None
+                and monks_trained < 2
+                and t >= monastery_busy_until
+                and sim.free_pop() >= 1
+                and sim.total_pop() < 195
+                and sim.bank.gold >= 100
+            ):
+                monks_trained += 1
+                sim.spend(ResourceBundle(gold=100), f"Monk{monks_trained}")
+                sim.military_units["monk"] += 1
+                monastery_busy_until = t + 51
+                if monks_trained == 1:
+                    relic1_time = t + 51 + 50
+                if monks_trained == 2:
+                    milestones["monks2_done_str"] = sim.fmt_time(t + 51)
+
+            # Range #1 builds ASAP; Ranges #2 & #3 delay until Monastery is placed & 1-Range HC production has started!
+            if barracks_ready_t is not None and t >= barracks_ready_t:
+                want_range = (ranges_started == 0) or (ranges_started < 3 and first_hc_t is not None and monastery_started)
+                if want_range and sim.bank.wood >= (175 + house_wood_res + (175 if (ranges_started >= 1 and not monastery_started) else 0)):
+                    ranges_started += 1
+                    sim.spend(ResourceBundle(wood=175), f"Range{ranges_started}")
+                    r_ready = t + 10 + 50
+                    range_ready_times.append(r_ready)
+                    sim.add_building("archery range", r_ready)
+                    _pull_builders(sim, ("wood", "farm"), 1, r_ready + 10)
+                    if ranges_started == 1:
+                        milestones["range1_ready_str"] = sim.fmt_time(r_ready)
+                    if ranges_started == 2:
+                        milestones["range2_ready_str"] = sim.fmt_time(r_ready)
+                    if ranges_started == 3:
+                        milestones["ranges3_ready_str"] = sim.fmt_time(r_ready)
+
+            # Siege Workshop builds once Range #2 is started (or right alongside Range #3) after first HC!
+            if first_hc_t is not None and ranges_started >= 2 and not sw_started and sim.bank.wood >= (200 + house_wood_res):
+                sw_started = True
+                sim.spend(ResourceBundle(wood=200), "SiegeWorkshop")
+                sw_ready_t = t + 10 + 40
+                sim.add_building("siege workshop", sw_ready_t)
+                _pull_builders(sim, ("wood", "farm"), 1, sw_ready_t + 10)
+                milestones["sw_ready_str"] = sim.fmt_time(sw_ready_t)
+
+            # Build Stone Mining Camp (-100W) & send 7 vils to Stone once Ranges #2-#3 & SW are placed (to mine 750S: 100S TC #3 + 650S Forward Castle!)
+            if ranges_started >= 3 and sw_started and not stone_ramp_started and sim.bank.wood >= (100 + house_wood_res):
+                stone_ramp_started = True
+                sim.spend(ResourceBundle(wood=100), "StoneMC")
+                smc_comp = t + int(rules.camp_or_berry_walk_time_one_way) + 35
+                sim.add_building("mining camp", smc_comp)
+                moved_s = 0
+                for v in sim.vils:
+                    if v["role"] in ("wood", "farm") and int(v["busy_until"]) <= t and moved_s < 7:
+                        v["role"] = "stone"
+                        v["busy_until"] = smc_comp if moved_s == 0 else (t + int(rules.camp_or_berry_walk_time_one_way))
+                        moved_s += 1
+                milestones["stone_started_str"] = sim.fmt_time(t)
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    sim.fmt_time(t),
+                    "Castle Age",
+                    "Stone Mining Camp (-100W) -> Move 7 vils to Stone (1st builds Mining Camp, ready +50s) to mine 750S.",
+                    "Starting 100S left after Feudal market sale pays for TC #2; these 7 Stone miners (+Free Stone Mining + Stone Shaft Mining = ~165S/min) fund TC #3 (100S) + Forward Castle (650S).",
+                )
+
+            # TC #2 (uses our remaining 100S!) & TC #3 unlock after 1-Range HC starts + Ranges #2-#3 & SW are started!
+            tc_unlock = first_hc_t is not None and ranges_started >= 3 and sw_started and f_cnt_now >= 15
+            if tc_unlock and not tc2_started and sim.bank.wood >= (275 + house_wood_res) and sim.bank.stone >= 100:
+                tc2_started = True
+                sim.spend(ResourceBundle(wood=275, stone=100), "TC2")
+                tc2_ready_t = t + 10 + int(round(calc_construction_time(150.0, 3)))
+                sim.add_pending_pop_building(tc2_ready_t, 5, "town center")
+                _pull_builders(sim, ("wood", "farm"), 3, tc2_ready_t + 10)
+                milestones["tc2_started_str"] = sim.fmt_time(t)
+            if tc_unlock and tc2_started and not tc3_started and sim.bank.wood >= (275 + house_wood_res) and sim.bank.stone >= 100:
+                tc3_started = True
+                sim.spend(ResourceBundle(wood=275, stone=100), "TC3")
+                tc3_ready_t = t + 10 + int(round(calc_construction_time(150.0, 3)))
+                sim.add_pending_pop_building(tc3_ready_t, 5, "town center")
+                _pull_builders(sim, ("wood", "farm"), 3, tc3_ready_t + 10)
+                milestones["tc3_started_str"] = sim.fmt_time(t)
+
+            if ranges_started >= 2 and not lc2_built and bow_saw_started and w_cnt_now >= 9 and sim.bank.wood >= (100 + house_wood_res + (175 if ranges_started < 3 else 0)):
+                lc2_built = True
+                sim.spend(ResourceBundle(wood=100), "LC2")
+                lc2_comp = t + 15 + 35
+                c2_idx = sim.add_lumber_camp(lc2_comp)
+                moved_w = 0
+                for v in sim.vils:
+                    if v["role"] in ("straggler", "wood") and int(v["busy_until"]) <= t and moved_w < 7:
+                        v["role"] = "wood"
+                        v["camp_idx"] = c2_idx
+                        v["busy_until"] = lc2_comp if moved_w == 0 else (t + 15)
+                        moved_w += 1
+
+            # Continuous Castle/Imp Farm seeder (prioritize Univ/Rax/Range1/Monastery, then Ranges 2-3 & SW, then Stone/TCs + Farms)
+            if f_cnt_now < 14:
+                bldg_w_res = (
+                    (int(univ_cost.wood) if not univ_started else 0)
+                    + (175 if not barracks_started else 0)
+                    + (175 if (barracks_ready_t is not None and ranges_started < 1) else 0)
+                    + (175 if (chemistry_started and not monastery_started) else 0)
+                )
+            elif not monastery_started:
+                bldg_w_res = 175
+            elif ranges_started < 3:
+                bldg_w_res = 175
+            elif not sw_started:
+                bldg_w_res = 200
+            elif not stone_ramp_started:
+                bldg_w_res = 100
+            elif not tc2_started or not tc3_started:
+                bldg_w_res = 275 if (f_cnt_now >= 15 and w_cnt_now < 20) else 0
+            elif sim.age == 4 and not siege_engineers_started:
+                bldg_w_res = 600
+            else:
+                bldg_w_res = 0
+            farm_cap_now = 15 if first_hc_t is None else (36 if not imp_clicked else 46)
+            min_w_keep = 8 if first_hc_t is None else 12
+            can_seed_farms = bow_saw_started and f_cnt_now < farm_cap_now and w_cnt_now > min_w_keep
+            if can_seed_farms and sim.bank.food < 1100 and sim.bank.wood >= (60 + house_wood_res + bldg_w_res):
+                for v in sim.vils:
+                    if v["role"] in ("straggler", "wood") and int(v["busy_until"]) <= t:
+                        walk_t = (
+                            int(rules.farm_walk_time)
+                            if v["role"] == "straggler"
+                            else int(rules.camp_or_berry_walk_time_one_way)
+                        )
+                        sim.spend(ResourceBundle(wood=60), "CastleFarm")
+                        v["role"] = "farm"
+                        v["busy_until"] = t + walk_t + 15
+                        sim.register_new_farm(t + walk_t + 15)
+                        break
+
+            # Stop mining stone once needed Stone (650S after TC #3, or 750S if TC #3 not yet spent) is banked!
+            stone_cap_now = 655 if tc3_started else 755
+            if stone_ramp_started and (sim.bank.stone >= stone_cap_now or fwd_castle_started) and sim.count_role("stone") > 0:
+                cur_camp = max(0, len(sim.lumber_camps) - 1)
+                for v in sim.vils:
+                    if v["role"] == "stone" and int(v["busy_until"]) <= t:
+                        if sim.count_role("farm") < 32 and sim.bank.wood >= (60 + house_wood_res + bldg_w_res):
+                            sim.spend(ResourceBundle(wood=60), "StoneToFarm")
+                            v["role"] = "farm"
+                            v["busy_until"] = t + 30
+                            sim.register_new_farm(t + 30)
+                        else:
+                            v["role"] = "gold" if sim.bank.gold < 600 else "wood"
+                            v["camp_idx"] = cur_camp
+                            v["busy_until"] = t + 15
+
+            if chemistry_ready_t is not None and t >= chemistry_ready_t and not chemistry_logged:
+                chemistry_logged = True
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
+                    "Castle Age",
+                    "Macro Loop 1 — Chemistry & 1st Range ASAP: Build Bohemian University (-100W) -> Chemistry (-300F, -200G, 100s) + Archery Range #1 (-175W) while staying on 1 TC.",
+                    f"Chemistry finishes at {sim.fmt_time()} -> immediate 1-Range Hand Cannoneers!",
+                )
+
+            # Upgrades at Blacksmith & Barracks
+            if not padded_armor_started and chemistry_started and queue_upg("padded archer armor", res_food=60 * sim.tc_count + 40):
+                padded_armor_started = True
+            if padded_armor_started and "padded archer armor" in sim.upgrades and not leather_armor_started and queue_upg("leather archer armor", res_food=60 * sim.tc_count + 40, res_gold=100):
+                leather_armor_started = True
+            if sim.age == 4 and leather_armor_started and "leather archer armor" in sim.upgrades and not ring_armor_started and queue_upg("ring archer armor", res_food=60 * sim.tc_count + 40, res_gold=150):
+                ring_armor_started = True
+
+            if barracks_ready_t is not None and t >= barracks_ready_t and t >= rax_busy_until:
+                if not pikeman_upg_started and first_hc_t is not None and sim.bank.food >= (160 + 60 * sim.tc_count) and sim.bank.gold >= 90:
+                    pikeman_upg_started = True
+                    sim.spend(ResourceBundle(food=160, gold=90), "PikemanUpg")
+                    sim.queue_upgrade("pikeman", t + 45)
+                    rax_busy_until = t + 45
+                elif sim.age == 4 and "pikeman" in sim.upgrades and not halberdier_upg_started and sim.bank.food >= 520 and sim.bank.gold >= 600:
+                    halberdier_upg_started = True
+                    sim.spend(ResourceBundle(food=300, gold=600), "HalberdierUpg")
+                    sim.queue_upgrade("halberdier", t + 50)
+                    rax_busy_until = t + 50
+
+            saving_for_imp = imp_prep_started and not imp_clicked
+            tc_food_res = 75 * sim.tc_count
+            monk_g_res = 100 if (monastery_ready_t is not None and t >= monastery_ready_t and first_hc_t is not None and monks_trained < 2 and t >= monastery_busy_until - 10) else 0
+
+            # Hand Cannoneers continuously from all active Ranges!
+            hc_train_s = 25 if "conscription" in sim.upgrades else 34
+            hc_cap = 60
+            if "chemistry" in sim.upgrades:
+                for idx, r_ready in enumerate(range_ready_times):
+                    if (
+                        t >= r_ready
+                        and t >= range_busy_until[idx]
+                        and not (saving_for_imp and (sim.bank.food < imp_cost.food + 45 or sim.bank.gold < imp_cost.gold + 50))
+                        and sim.free_pop() >= 1
+                        and sim.total_pop() < 195
+                        and sim.bank.food >= (45 + tc_food_res)
+                        and sim.bank.gold >= (50 + monk_g_res)
+                    ):
+                        sim.spend(ResourceBundle(food=45, gold=50), "HandCannoneer")
+                        range_busy_until[idx] = t + hc_train_s
+                        if first_hc_t is None:
+                            first_hc_t = t
+                            milestones["first_hc_str"] = sim.fmt_time(t)
+                        if sim.military_units["hand_cannoneer"] >= hc_cap or sim.total_pop() >= 194:
+                            sim.casualties["hand_cannoneer"] += 1
+                        else:
+                            sim.military_units["hand_cannoneer"] += 1
+
+            # Mangonels & optional Battering Rams from Siege Workshop
+            mang_target = (2 if (not tc3_started or castle_rams > 0) else 3) if sim.age == 3 else 6
+            if (
+                sw_ready_t is not None
+                and t >= sw_ready_t
+                and t >= sw_busy_until
+                and "chemistry" in sim.upgrades
+                and not saving_for_imp
+                and sim.free_pop() >= 1
+                and sim.total_pop() < 195
+            ):
+                if (
+                    sim.military_units["mangonel"] < 2
+                    and sim.bank.wood >= (160 + house_wood_res)
+                    and sim.bank.gold >= (135 + monk_g_res)
+                ):
+                    sim.spend(ResourceBundle(wood=160, gold=135), "Mangonel")
+                    sw_busy_until = t + 46
+                    sim.military_units["mangonel"] += 1
+                elif (
+                    sim.military_units["battering_ram"] < castle_rams
+                    and sim.bank.wood >= (160 + house_wood_res + (275 if not tc3_started else 0))
+                    and sim.bank.gold >= (75 + monk_g_res)
+                ):
+                    sim.spend(ResourceBundle(wood=160, gold=75), "BatteringRam")
+                    sw_busy_until = t + 36
+                    sim.military_units["battering_ram"] += 1
+                elif (
+                    sim.military_units["mangonel"] < mang_target
+                    and sim.bank.wood >= (160 + house_wood_res + (275 if not tc3_started else 0))
+                    and sim.bank.gold >= (135 + monk_g_res)
+                ):
+                    sim.spend(ResourceBundle(wood=160, gold=135), "Mangonel")
+                    sw_busy_until = t + 46
+                    sim.military_units["mangonel"] += 1
+
+            # A few Pikemen (~8-10 in Castle, 12-16 Halbs in Imp)
+            pike_target = 8 if sim.age == 3 else 14
+            if (
+                barracks_ready_t is not None
+                and t >= barracks_ready_t
+                and t >= rax_busy_until
+                and "pikeman" in sim.upgrades
+                and sim.military_units["pikeman"] < pike_target
+                and not (saving_for_imp and sim.bank.food < imp_cost.food + 35)
+                and sim.free_pop() >= 1
+                and sim.total_pop() < 195
+                and sim.bank.food >= (35 + tc_food_res)
+                and sim.bank.wood >= (25 + house_wood_res)
+            ):
+                sim.spend(ResourceBundle(food=35, wood=25), "Pikeman")
+                rax_busy_until = t + (17 if "conscription" in sim.upgrades else 22)
+                sim.military_units["pikeman"] += 1
+
+            if not mil_loop_logged and ranges_started >= 3 and sw_started and sim.military_units["mangonel"] >= 2:
+                mil_loop_logged = True
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    f"{milestones.get('first_hc_str', sim.fmt_time())} – {sim.fmt_time()}",
+                    "Castle Age",
+                    "Macro Loop 2 — Monastery + 2 Monks, then Ranges #2–#3 + Siege Workshop (2+ Mangonels) & Pikes: Drop Monastery (-175W -> 2 Monks for Relic +30G/min & conversions) delaying Range #2 slightly, then add Ranges #2–#3 (-350W), SW (-200W), Pikeman upg & Pikes!",
+                    f"Army online: {format_army_counts(current_army_dict()).replace('Army: ', '')}.",
+                )
+
+            if not tc_expand_logged and tc3_ready_t is not None and t >= tc3_ready_t:
+                tc_expand_logged = True
+                milestones["boom3tc_ready_str"] = sim.fmt_time(t)
+                milestones["boom3tc_vils"] = len(sim.vils)
+                milestones["boom3tc_alloc"] = sim.current_macro_alloc()
+                add_row(
+                    f"{len(sim.vils)} ({sim.total_pop()})",
+                    f"{milestones.get('tc2_started_str', sim.fmt_time())} – {sim.fmt_time()}",
+                    "Castle Age",
+                    "Macro Loop 3 — TC #2 & TC #3 Expansion + Forward Castle Bank: Add TC #2 (using remaining 100S!) & TC #3, LC #2, Wheelbarrow -> bank 650S while massing Hand Cannoneers!",
+                    f"3-TC eco + 3-Range production active ({format_army_counts(current_army_dict()).replace('Army: ', '')}).",
+                )
+
+            # Forward Castle expedition (8 Loom vils, 60s walk per rule 2.10)
+            if (
+                "chemistry" in sim.upgrades
+                and "loom" in sim.upgrades
+                and tc3_started
+                and sim.military_units["hand_cannoneer"] >= 14
+                and sim.military_units["mangonel"] >= 2
+                and sim.bank.stone >= 650
+                and not fwd_vils_dispatched
+            ):
+                fwd_vils_dispatched = True
+                fwd_vils_arrive_t = t + int(rules.forward_walk_time_default)
+                milestones["fwd_vils_dispatched_str"] = sim.fmt_time(t)
+                for v in sim.vils:
+                    if v["role"] in ("wood", "farm", "stone") and int(v["busy_until"]) <= t and len(fwd_vils) < 8:
+                        v["role"] = "forward"
+                        v["busy_until"] = fwd_vils_arrive_t + 120
+                        fwd_vils.append(v)
+
+            if fwd_vils_arrive_t is not None and t >= fwd_vils_arrive_t and not fwd_castle_started and sim.bank.stone >= 650:
+                fwd_castle_started = True
+                sim.spend(ResourceBundle(stone=650), "ForwardCastle")
+                c_b = int(round(calc_construction_time(200.0, max(1, len(fwd_vils)))))
+                fwd_castle_ready_t = t + c_b
+                sim.add_pending_pop_building(fwd_castle_ready_t, 20, "castle")
+                milestones["fwd_castle_started_str"] = sim.fmt_time(t)
+                milestones["fwd_castle_ready_str"] = sim.fmt_time(fwd_castle_ready_t)
+                for v in fwd_vils:
+                    v["busy_until"] = fwd_castle_ready_t
+                cur_camp = max(0, len(sim.lumber_camps) - 1)
+                for v in sim.vils:
+                    if v["role"] == "stone":
+                        v["role"] = "gold" if sim.bank.gold < 750 else "wood"
+                        v["camp_idx"] = cur_camp
+                        v["busy_until"] = t + 15
+
+            if fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
+                cur_camp = max(0, len(sim.lumber_camps) - 1)
+                for v in fwd_vils:
+                    if v["role"] == "forward" and int(v["busy_until"]) <= t:
+                        v["role"] = "wood"
+                        v["camp_idx"] = cur_camp
+                        v["busy_until"] = t + int(rules.forward_walk_time_default)
+
+            # Imp prep once Forward Castle expedition has launched + 3 TCs up + solid army!
+            if (
+                sim.age == 3
+                and not imp_prep_started
+                and tc3_ready_t is not None
+                and t >= tc3_ready_t
+                and fwd_vils_dispatched
+                and len(sim.vils) >= 65
+                and sim.military_units["hand_cannoneer"] >= 18
+            ):
+                imp_prep_started = True
+                milestones["imp_prep_str"] = sim.fmt_time(t)
+                if not fwd_loop_logged:
+                    fwd_loop_logged = True
+                    add_row(
+                        f"{len(sim.vils)} ({sim.total_pop()})",
+                        f"{milestones.get('fwd_vils_dispatched_str', sim.fmt_time())} – {sim.fmt_time()}",
+                        "Castle Age",
+                        f"Forward Castle & Imperial Prep: 8 Loom vils walk forward (60s; rule 2.10) -> Forward Castle (-650S, 60s -> ready {milestones.get('fwd_castle_ready_str', '')}); bank 1000F / 800G for Imperial Age.",
+                        "Castle + University/SW satisfies Imperial Age building requirement (rule 4.6).",
+                    )
+
+            # Trebuchets & Imperial Techs
+            if sim.age == 4 and fwd_castle_ready_t is not None and t >= fwd_castle_ready_t:
+                if t >= castle_busy_until:
+                    treb_target = 4
+                    treb_train_s = 38 if "conscription" in sim.upgrades else 50
+                    if (
+                        sim.military_units["trebuchet"] < treb_target
+                        and sim.free_pop() >= 1
+                        and sim.total_pop() < 198
+                        and sim.bank.wood >= (200 + house_wood_res)
+                        and sim.bank.gold >= 200
+                    ):
+                        sim.spend(ResourceBundle(wood=200, gold=200), "Trebuchet")
+                        castle_busy_until = t + treb_train_s
+                        sim.military_units["trebuchet"] += 1
+                    elif not wagenburg_started and sim.military_units["trebuchet"] >= 2 and sim.bank.food >= 300 and sim.bank.gold >= 300:
+                        wagenburg_started = True
+                        sim.spend(ResourceBundle(food=300, gold=300), "WagenburgTactics")
+                        sim.queue_upgrade("wagenburg tactics", t + 45)
+                        castle_busy_until = t + 45
+
+                if univ_ready_t is not None and t >= univ_ready_t and not siege_engineers_started and sim.military_units["trebuchet"] >= 2:
+                    if queue_upg("siege engineers", res_food=100, res_wood=100):
+                        siege_engineers_started = True
+
+            # Refresh Lumber Camp when worst active camp hits <= 65% (rule 3.4)
+            if (
+                t - last_lc_refresh_t >= 240
+                and sim.min_active_camp_efficiency() <= rules.wood_refresh_lc_threshold
+                and not saving_for_imp
+                and sim.bank.wood >= (350 + house_wood_res)
+                and sim.count_role("wood") >= 6
+            ):
+                last_lc_refresh_t = t
+                sim.spend(ResourceBundle(wood=100), "LumberCampRefresh")
+                new_idx = sim.add_lumber_camp(t + 15 + 35)
+                sim.reassign_woodcutters_to_new_camp(new_idx, min(8, sim.count_role("wood")))
+
+            # Anti-float rebalancer + Gold -> Stone / Wood / Farms shifting + Market fallback!
+            if t % 10 == 0 and t >= (castle_reached_t or 0) + 90:
+                g_cnt_r = sim.count_role("gold")
+                w_cnt_r = sim.count_role("wood", "straggler")
+                f_cnt_r = sim.count_role("farm")
+                s_cnt_r = sim.count_role("stone")
+                cur_camp = max(0, len(sim.lumber_camps) - 1)
+
+                # 1) Gold float guard: keep >= 10 Gold vils once 3 Ranges are active so Mangonels/HCs don't starve!
+                gold_float_thresh = 880 if saving_for_imp else (480 if sim.age == 3 else 1100)
+                min_gold_vils = 10 if ranges_started >= 3 else 4
+                if sim.bank.gold > gold_float_thresh and g_cnt_r > min_gold_vils:
+                    stone_target_chk = 660 if tc3_started else 760
+                    if stone_ramp_started and not fwd_castle_started and sim.bank.stone < stone_target_chk and s_cnt_r < 8:
+                        moved = 0
+                        for v in sim.vils:
+                            if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
+                                v["role"] = "stone"
+                                v["busy_until"] = t + 15
+                                moved += 1
+                    elif (sim.bank.wood < 450 or ranges_started < 3) and w_cnt_r < 22:
+                        moved = 0
+                        for v in sim.vils:
+                            if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
+                                v["role"] = "wood"
+                                v["camp_idx"] = cur_camp
+                                v["busy_until"] = t + 15
+                                moved += 1
+                    elif sim.bank.food < 1050 and f_cnt_r < 46 and sim.bank.wood >= (180 + house_wood_res):
+                        moved = 0
+                        for v in sim.vils:
+                            if v["role"] == "gold" and int(v["busy_until"]) <= t and moved < 3:
+                                sim.spend(ResourceBundle(wood=60), "ShiftGoldToFarm")
+                                v["role"] = "farm"
+                                v["busy_until"] = t + 30
+                                sim.register_new_farm(t + 30)
+                                moved += 1
+                                if moved >= 3 or sim.bank.wood < (120 + house_wood_res):
+                                    break
+                # 2) Pull vils back from surplus Wood/Farms to Gold when Gold drops low (or below 10 Gold vils with 3 Ranges)
+                elif (sim.bank.gold < (850 if saving_for_imp else (600 if sim.age == 4 else 380)) or (ranges_started >= 3 and g_cnt_r < 10 and sim.bank.gold < 600)) and (sim.bank.wood > 350 or sim.bank.food > 800 or w_cnt_r > 18 or f_cnt_r > 24) and g_cnt_r < 24:
+                    src_role = "farm" if (sim.bank.food > 1050 and f_cnt_r > 22) else ("wood" if w_cnt_r > 16 else None)
+                    if src_role:
+                        moved = 0
+                        for v in sim.vils:
+                            if v["role"] == src_role and int(v["busy_until"]) <= t and moved < 3:
+                                v["role"] = "gold"
+                                v["busy_until"] = t + 15
+                                moved += 1
+                # 3) Excess Food -> Wood if Wood low
+                elif (not saving_for_imp and sim.bank.food > 1000 and sim.bank.wood < 450 and f_cnt_r > 18) or (sim.age == 4 and not siege_engineers_started and sim.bank.wood < 650 and sim.bank.food > 800 and f_cnt_r > 24):
+                    moved = 0
+                    for v in sim.vils:
+                        if v["role"] == "farm" and int(v["busy_until"]) <= t and moved < 4:
+                            v["role"] = "wood"
+                            v["camp_idx"] = cur_camp
+                            v["busy_until"] = t + 15
+                            moved += 1
+                # 4) Excess Wood -> Farms once Ranges/SW/TCs are placed (don't steal 275W from TC #2/#3 or 600W Siege Eng!)
+                if tc3_started and (sim.age < 4 or siege_engineers_started) and sim.bank.wood > (300 + house_wood_res) and sim.bank.food < 1000 and w_cnt_r > 16 and f_cnt_r < 42:
+                    moved = 0
+                    for v in sim.vils:
+                        if v["role"] == "wood" and int(v["busy_until"]) <= t and moved < 4:
+                            sim.spend(ResourceBundle(wood=60), "ShiftWoodToFarm")
+                            v["role"] = "farm"
+                            v["busy_until"] = t + 30
+                            sim.register_new_farm(t + 30)
+                            moved += 1
+                            if moved >= 4 or sim.bank.wood < (240 + house_wood_res):
+                                break
+
+                # 5) Market buy/sell balancing:
+                #    - Worst case: buy 100-200 of bottlenecked Wood/Food/Stone when floating excess Gold!
+                #    - Or sell excess Wood/Food if Gold < 780 during Imp click prep / Imp
+                if (t - last_market_trade_t) >= 40:
+                    if saving_for_imp and sim.bank.gold >= 1020 and sim.bank.food < 1000:
+                        last_market_trade_t = t
+                        sim.buy_at_market("food", 200 if sim.bank.gold >= 1220 and sim.bank.food < 850 else 100)
+                    elif not saving_for_imp and sim.age == 3 and sim.bank.gold >= 680 and sim.bank.wood < 275 and (ranges_started < 3 or not sw_started or not tc3_started):
+                        last_market_trade_t = t
+                        sim.buy_at_market("wood", 200 if sim.bank.gold >= 950 and sim.bank.wood < 150 else 100)
+                    elif stone_ramp_started and not fwd_castle_started and sim.bank.stone >= 450 and sim.bank.stone < 650 and sim.bank.gold >= (760 if not saving_for_imp else 1050):
+                        last_market_trade_t = t
+                        sim.buy_at_market("stone", 100)
+                    elif not saving_for_imp and sim.age == 3 and sim.bank.gold >= 800 and sim.bank.food < 350:
+                        last_market_trade_t = t
+                        sim.buy_at_market("food", 100)
+                    elif sim.age == 4 and not siege_engineers_started and sim.bank.wood < 620 and sim.bank.gold >= 850:
+                        last_market_trade_t = t
+                        sim.buy_at_market("wood", 200)
+                    elif sim.age == 3 and imp_prep_started and not imp_clicked:
+                        if sim.bank.food >= 1000 and sim.bank.gold < 780 and sim.bank.wood >= 350:
+                            last_market_trade_t = t
+                            sim.sell_at_market("wood", 100)
+                        elif sim.bank.food >= 1200 and sim.bank.gold < 780:
+                            last_market_trade_t = t
+                            sim.sell_at_market("food", 100)
+                    elif sim.age == 4 and (sim.bank.wood >= 1200 or sim.bank.food >= 1200) and sim.bank.gold < 1200:
+                        if sim.bank.wood >= 1200:
+                            last_market_trade_t = t
+                            sim.sell_at_market("wood", 200)
+                        elif sim.bank.food >= 1200:
+                            last_market_trade_t = t
+                            sim.sell_at_market("food", 200)
+
+        # Completion criterion
+        if (
+            sim.age == 4
+            and sim.military_units["trebuchet"] >= 3
+            and sim.military_units["hand_cannoneer"] >= 35
+            and conscription_started
+            and ring_armor_started
+            and halberdier_upg_started
+            and siege_engineers_started
+        ):
+            milestones["full_push_str"] = sim.fmt_time(t)
+            milestones["final_vils"] = len(sim.vils)
+            milestones["final_army"] = current_army_dict()
+            milestones["final_bank"] = sim.bank.to_dict()
+            milestones["housed_seconds"] = housed_seconds
+            milestones["tc_pre_click_idle_s"] = tc_pre_click_idle_s
+            milestones["extra_tc_idle_s"] = tc_unplanned_idle_s
+            milestones["tc1_idle_before_imp_s"] = tc_pre_click_idle_s + tc_unplanned_idle_s
+            milestones["negative_bank_count"] = len(sim.negative_bank_events)
+            milestones["max_castle_float"] = {k: round(v, 1) for k, v in max_castle_float.items()}
+            milestones["market_trades"] = sim.market_trades
+            add_row(
+                f"{len(sim.vils)} ({sim.total_pop()})",
+                f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
+                "Imperial Age",
+                f"Full Imperial Composition Online ({len(sim.vils)} Vils + {sum(current_army_dict().values())} Military = {sim.total_pop()} Pop): {format_army_counts(current_army_dict()).replace('Army: ', '')}.",
+                f"Upgrades active: Chemistry, Ring Archer Armor, Halberdier (+25% bonus dmg), Siege Engineers, Conscription. Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
+            )
+            break
+
+        sim.tick_gather(reseed_reserve_w=house_wood_res)
+        if t % 10 == 0:
+            record_timeline_point()
+
+    if not record_outputs:
+        milestones.setdefault("housed_seconds", housed_seconds)
+        milestones.setdefault("extra_tc_idle_s", tc_unplanned_idle_s)
+        milestones.setdefault("feudal_click_s", feudal_click_t)
+        milestones.setdefault("castle_click_s", castle_click_t)
+        return BuildOrderDocument("", "Bohemians", variant_label, "", [], []), milestones
+
+    assert imp_reached_t is not None and imp_reached_t < 2400, f"Imperial missed <40:00: {imp_reached_t}"
+    assert milestones.get("full_push_str") is not None, "Completion criterion not reached before max_sim_t"
+    assert housed_seconds == 0, f"Housed for {housed_seconds}s"
+    assert tc_pre_click_idle_s <= int(rules.max_end_of_age_tc_idle_seconds), f"Pre-click TC idle > 5s (rule 5.1): {tc_pre_click_idle_s}s"
+    assert tc_unplanned_idle_s <= int(rules.max_end_of_age_tc_idle_seconds), f"Unplanned TC idle: {tc_unplanned_idle_s}s"
+    assert not sim.negative_bank_events, f"Negative bank events: {sim.negative_bank_events[:3]}"
+
+    steady_state = planner.compute_steady_state_vils(
+        items=[
+            ContinuousProductionItem("villager", 3),
+            ContinuousProductionItem("hand cannoneer", 3),
+            ContinuousProductionItem("mangonel", 1),
+            ContinuousProductionItem("spearman", 1),
+        ],
+        civ="Bohemians",
+        age=3,
+        upgrades=["double-bit axe", "bow saw", "horse collar", "wheelbarrow", "gold mining", "gold shaft mining"],
+        food_source="farmer",
+        wood_minutes_since_lc=1.0,
+    )
+    steady_state["title"] = (
+        "Steady-State Target (3 TC Vils + 3-Range Hand Cannons + 1 SW Mangonel + 1 Rax Pikeman + Farm Reseed, w/ 10% Castle Buffer)"
+    )
+
+    I = RTS_ICONS
+    fin_vils = len(sim.vils)
+    end_alloc = sim.current_macro_alloc()
+    imp_c_vils = int(milestones.get("imp_click_vils", 85))
+    imp_c_alloc = dict(milestones.get("imp_click_alloc", end_alloc))
+    chem_done_str = str(milestones.get("chemistry_done_str", "17:15"))
+    first_hc_str = str(milestones.get("first_hc_str", chem_done_str))
+    fwd_c_str = str(milestones.get("fwd_castle_ready_str", "30:00"))
+    imp_c_str = str(milestones.get("imp_click_str", "30:00"))
+    imp_r_str = str(milestones.get("imp_reached_str", "33:10"))
+    castle_r_str = str(milestones.get("castle_reached_str", "14:26"))
+    castle_arr_alloc = dict(milestones.get("castle_arrival_alloc", {"wood": 12, "food": 10, "gold": 4, "stone": 0}))
+    boom_vils = int(milestones.get("boom3tc_vils", 50))
+    boom_alloc = dict(milestones.get("boom3tc_alloc", {"wood": 18, "food": 20, "gold": 8, "stone": 4}))
+    stone_s_str = str(milestones.get("stone_started_str", "24:15"))
+
+    rts_steps = [
+        RTSOverlayStep(villager_count=6, age=1, wood=0, food=6, gold=0, stone=0, notes=[f"Vils #1-#6: {I['build']} 2 Houses at 0:00, then all 6 on {I['sheep']} under TC."]),
+        RTSOverlayStep(villager_count=9, age=1, wood=3, food=6, gold=0, stone=0, notes=[f"Vils #7-#9 (3 vils) -> {I['wood']} (1st vil walks 15s + {I['build']} {I['lumber_camp']} #1)."]),
+        RTSOverlayStep(villager_count=11, age=1, wood=4, food=7, gold=0, stone=0, notes=[f"Vil #10 lures 1st {I['boar']} (garrison 7 TC vils 5s on arrival); Vil #11 to {I['wood']} (4 on Wood)."]),
+        RTSOverlayStep(villager_count=15, age=1, wood=4, food=11, gold=0, stone=0, notes=[f"Vils #12-#15 (4 vils) -> 6 Chickens on {I['mill']} #1 (Vil #12 builds {I['mill']}, Vil #13 builds House #3). Lure 2nd {I['boar']} before 1st finishes."]),
+        RTSOverlayStep(villager_count=19, age=1, wood=4, food=15, gold=0, stone=0, notes=[f"Vils #16-#19 (4 vils) -> {I['berries']} (1st builds {I['mill']} #2, 3rd builds House #4)."]),
+        RTSOverlayStep(villager_count=21, age=1, wood=6, food=15, gold=0, stone=0, notes=[f"Vils #20-#21 (2 vils) -> {I['wood']} at {I['lumber_camp']} #1 (skip Dark Age Gold MC!)."]),
+        RTSOverlayStep(villager_count=23, age=1, wood=7, food=16, gold=0, stone=0, notes=[f"Vil #22 builds {I['house']} #5 -> {I['wood']} (7 on Wood); Vil #23 -> {I['sheep']}/Food."]),
+        RTSOverlayStep(villager_count=24, age=1, wood=7, food=16, gold=1, stone=0, notes=[f"Vil #24 -> Long-distance 10 {I['gold']} (finish before {I['market']} completes, then return to Wood/{I['farm']}s)! Click {I['feudal_age']} (500F) at 08:45; Sheep #8 -> Stragglers + up to 8 {I['farm']}s."]),
+        RTSOverlayStep(villager_count=26, age=2, wood=9, food=17, gold=0, stone=0, notes=[f"In {I['feudal_age']}: Free Gold/Stone Mining! Vils #25-#26 -> {I['wood']}; 3 vils {I['build']} {I['market']} & 1 vil Bohemian {I['blacksmith']} (50W!).", f"Sell 100 {I['stone']} at {I['market']} (+91G -> 201G, saving 200W!) & click {I['castle_age']} (800F, 200G)!"]),
+        RTSOverlayStep(
+            villager_count=26, age=3,
+            wood=castle_arr_alloc["wood"], food=castle_arr_alloc["food"], gold=castle_arr_alloc["gold"], stone=castle_arr_alloc["stone"],
+            notes=[
+                f"Click {I['castle_age']}: {I['double_bit_axe']} + {I['horse_collar']}, {I['mining_camp']} on {I['gold']} (4 vils) & {I['barracks']}.",
+                f"Reach {I['castle_age']} ({castle_r_str}): Stay 1 TC! Drop Bohemian {I['university']} (100W!) + {I['archery_range']} #1 + {I['bow_saw']} -> {I['chemistry']} + {I['monastery']} (175W, 2 {I['monk']}s for Relic +30G/min!) -> 1st {I['hand_cannoneer']} at {first_hc_str}!",
+            ],
+        ),
+        RTSOverlayStep(
+            villager_count=boom_vils, age=3,
+            wood=boom_alloc["wood"], food=boom_alloc["food"], gold=boom_alloc["gold"], stone=boom_alloc["stone"],
+            notes=[
+                f"After {I['monastery']} + 2 {I['monk']}s: add {I['archery_range']} #2 & #3 + {I['siege_workshop']} (2+ {I['mangonel']}s) + {I['pikeman']}s.",
+                f"At {stone_s_str}: {I['mining_camp']} on {I['stone']} (-100W, 7 vils) -> mine 750S for {I['town_center']} #3 (TC #2 uses leftover 100S!) + Forward {I['castle']}!",
+            ],
+        ),
+        RTSOverlayStep(
+            villager_count=imp_c_vils, age=3,
+            wood=imp_c_alloc["wood"], food=imp_c_alloc["food"], gold=imp_c_alloc["gold"], stone=imp_c_alloc["stone"],
+            notes=[
+                f"3-Range {I['hand_cannoneer']}s + {I['mangonel']}s + {I['pikeman']}! Send 8 Loom vils forward (60s) -> Forward {I['castle']} (-650S, ready {fwd_c_str}).",
+                f"Click {I['imperial_age']} ({imp_c_str}, 1000F, 800G) cleanly before 40:00.",
+            ],
+        ),
+        RTSOverlayStep(
+            villager_count=fin_vils, age=4,
+            wood=end_alloc["wood"], food=end_alloc["food"], gold=end_alloc["gold"], stone=end_alloc["stone"],
+            notes=[
+                f"Reach {I['imperial_age']} ({imp_r_str}): Conscription, Ring Archer Armor, {I['halberdier']}, Siege Engineers, Wagenburg Tactics + {I['trebuchet']}s from Forward {I['castle']}!",
+            ],
+        ),
+    ]
+
+    desc = (
+        f"Bohemians Arena FC (6 Chickens Milled + Berry Mill, Checked w/ 8) — {variant_label}. "
+        f"Long-distance 10G + sell 100S (+91G) to save 200W in Feudal; tight anti-float Gold -> Stone/Wood/Farm shifting; synced to rules.md."
+    )
+
+    doc = BuildOrderDocument(
+        name="Bohemians Arena Fast Castle (1-TC Early Hand Cannoneers)",
+        civilization="Bohemians",
+        variant_label=variant_label,
+        description=desc,
+        rows=rows,
+        rts_steps=rts_steps,
+        steady_state_summary=steady_state,
+        telemetry_summary={
+            "rotted_food": {k: round(v, 1) for k, v in sim.rotted_food.items()},
+            "total_rotted_food": round(sum(sim.rotted_food.values()), 1),
+        },
+        resource_timeline=resource_timeline,
+    )
+    return doc, milestones
+
+
+def main() -> None:
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    for old_name in (
+        "bohemians_arena_fc_hand_cannons_pure_boom.json",
+        "bohemians_arena_fc_hand_cannons_monastery_fervor.json",
+        "bohemians_arena_fc_hand_cannons_24p2_3tc_boom.json",
+        "bohemians_arena_fc_hand_cannons_28p2_3tc_boom.json",
+    ):
+        p = OUT_DIR / old_name
+        if p.exists():
+            p.unlink()
+
+    doc, ms = run_bohemians_1tc_fast_hc()
+    rob = run_late_command_checks(
+        "24p2_1tc_fast_hc",
+        lambda dfn, chk: run_bohemians_1tc_fast_hc(delay_fn=dfn, chicken_override=chk, record_outputs=False)[1],
+        baseline_clicks={"feudal_click_s": int(ms["feudal_click_s"]), "castle_click_s": int(ms["castle_click_s"])},
+        chicken_check_counts=(8,),
+    )
+    ms["robustness_passed"] = rob["passed"]
+    ms["robustness_details"] = rob["details"]
+    assert rob["passed"], f"Robustness failed: {rob['failures']}"
+
+    json_path = export_rts_overlay_json(doc, OUT_DIR / "bohemians_arena_fc_hand_cannons_24p2_1tc_fast_hc.json")
+    print(f"=== {ms['variant']} ===")
+    for k, v in ms.items():
+        if k != "variant":
+            print(f"  {k}: {v}")
+    print(f"  Rot telemetry: {doc.telemetry_summary['rotted_food']} (Total: {doc.telemetry_summary['total_rotted_food']}F)")
+    print(f"  Wrote RTS Overlay JSON: {json_path} ({len(doc.rts_steps)} steps)\n")
+
+    html_path = export_build_order_html(
+        [doc],
+        title="Bohemians Arena FC: 24+2 1-TC Early Hand Cannoneers, Siege, Pikemen & Forward Castle",
+        output_path=OUT_DIR / "bohemians_arena_fc_hand_cannons.html",
+    )
+    print(f"Wrote HTML report: {html_path}")
+
+
+if __name__ == "__main__":
+    main()

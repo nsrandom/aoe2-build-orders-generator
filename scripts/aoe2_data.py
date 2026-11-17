@@ -363,6 +363,18 @@ CIV_BUILD_BONUSES = {
         "hunter_carry_delta": 15.0,
         "hunt_food_multiplier": 1.20,
     },
+    "Bohemians": {
+        # Update 61321: -100W applies to Blacksmith & University only (Monastery discount removed).
+        "building_wood_deltas": {"blacksmith": -100.0, "university": -100.0},
+        # Mining Camp upgrades are free upon reaching the respective age.
+        "free_mining_camp_upgrades_by_age": {
+            2: ("gold mining", "stone mining"),
+            3: ("gold shaft mining", "stone shaft mining"),
+        },
+        "castle_age_chemistry": True,
+        "monastery_techs_affect_villagers": ("fervor", "sanctity"),
+        "spearman_bonus_damage_multiplier": 1.25,
+    },
 }
 
 
@@ -441,6 +453,11 @@ class AoE2Database:
                     else:
                         train_time = float(v_mod["trainTime"])
 
+        # Apply civ-specific building wood discounts (e.g., Bohemians -100W Blacksmith/University)
+        w_deltas = CIV_BUILD_BONUSES.get(civ, {}).get("building_wood_deltas", {})
+        if key in w_deltas:
+            cost_dict["wood"] = max(0.0, float(cost_dict.get("wood", 0.0)) + float(w_deltas[key]))
+
         cost = ResourceBundle(
             food=float(cost_dict.get("food", 0.0)),
             wood=float(cost_dict.get("wood", 0.0)),
@@ -457,6 +474,11 @@ class AoE2Database:
         entry = self.upgrades_by_name[key]
         cost_dict = dict(entry.get("cost", {}))
         res_time = float(entry.get("time", 0.0))
+
+        # Apply civ-specific building wood discounts (e.g., Bohemians -100W Blacksmith/University)
+        w_deltas = CIV_BUILD_BONUSES.get(civ, {}).get("building_wood_deltas", {})
+        if key in w_deltas:
+            cost_dict["wood"] = max(0.0, float(cost_dict.get("wood", 0.0)) + float(w_deltas[key]))
 
         cost = ResourceBundle(
             food=float(cost_dict.get("food", 0.0)),
@@ -620,6 +642,8 @@ class AoE2Database:
                 speed_mult *= 1.10
             if "hand cart" in upg_set:
                 speed_mult *= 1.10
+            if civ == "Bohemians" and "fervor" in upg_set:
+                speed_mult *= 1.15
             eff_rt = round_trip / speed_mult
             carry = self.get_carry_capacity(role_key, civ=civ, upgrades=upgrades)
             rate = carry / ((carry / raw_rate) + eff_rt)
