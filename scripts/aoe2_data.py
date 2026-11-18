@@ -333,7 +333,10 @@ CIV_BUILD_BONUSES = {
         "free_pikeman": True,
     },
     "Lithuanians": {
-        "starting_resource_delta": ResourceBundle(food=100),  # +100F per TC
+        "starting_resource_delta": ResourceBundle(food=100),  # +100F per TC (Update 81058)
+        "extra_tc_food_bonus": 100.0,  # +100F per additional TC completed (Update 81058)
+        "monastery_work_rate_multiplier": 1.20,  # Team Bonus: Monasteries work 20% faster
+        "relic_knight_attack_cap": 4,  # +1 attack to Knights/Leitis per Relic, max +4
     },
     "Persians": {
         "starting_resource_delta": ResourceBundle(food=50, wood=50),
@@ -458,6 +461,11 @@ class AoE2Database:
         if key in w_deltas:
             cost_dict["wood"] = max(0.0, float(cost_dict.get("wood", 0.0)) + float(w_deltas[key]))
 
+        # Apply civ-specific Monastery work-rate multiplier (e.g., Lithuanians +20% faster Monasteries)
+        monastery_mult = CIV_BUILD_BONUSES.get(civ, {}).get("monastery_work_rate_multiplier")
+        if monastery_mult and key == "monk":
+            train_time = train_time / float(monastery_mult)
+
         cost = ResourceBundle(
             food=float(cost_dict.get("food", 0.0)),
             wood=float(cost_dict.get("wood", 0.0)),
@@ -479,6 +487,11 @@ class AoE2Database:
         w_deltas = CIV_BUILD_BONUSES.get(civ, {}).get("building_wood_deltas", {})
         if key in w_deltas:
             cost_dict["wood"] = max(0.0, float(cost_dict.get("wood", 0.0)) + float(w_deltas[key]))
+
+        # Apply civ-specific Monastery work-rate multiplier (e.g., Lithuanians +20% faster Monasteries)
+        monastery_mult = CIV_BUILD_BONUSES.get(civ, {}).get("monastery_work_rate_multiplier")
+        if monastery_mult and key == "monk":
+            train_time = train_time / float(monastery_mult)
 
         cost = ResourceBundle(
             food=float(cost_dict.get("food", 0.0)),
@@ -504,6 +517,14 @@ class AoE2Database:
         }
         if key in university_and_dock_techs and "dock_and_university_tech_cost_multiplier" in civ_bonus:
             cost = cost.scale(civ_bonus["dock_and_university_tech_cost_multiplier"])
+
+        monastery_techs = {
+            "devotion", "faith", "redemption", "illumination", "atonement",
+            "block printing", "herbal medicine", "theocracy", "heresy",
+            "sanctity", "fervor",
+        }
+        if key in monastery_techs and "monastery_work_rate_multiplier" in civ_bonus:
+            res_time = res_time / float(civ_bonus["monastery_work_rate_multiplier"])
 
         return cost, res_time
 

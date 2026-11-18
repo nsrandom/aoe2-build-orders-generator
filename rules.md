@@ -200,7 +200,7 @@ Commands at `0:00` (opening houses, villager queue) are always on time. A scenar
 
 10.1 **[USER]** See [`output.md`](output.md). In summary, each build lives in `builds/<build_slug>/` with:
 - build-specific `sim_<build_slug>.py` and `generate_<build_slug>.py`;
-- an HTML report (`<build_slug>.html`) with a tab per variant, timeline tables split by phase, compressed same-resource and macro rows, and a strategy comparison chart;
+- an HTML report (`<build_slug>.html`) with a tab per variant, timeline tables split by phase, compressed same-resource and macro rows, and a strategy comparison chart (plus a milestone comparison table below the chart when a build has multiple strategies);
 - an RTS Overlay JSON per variant, where every step satisfies `sum(resources.values()) == villager_count`.
 
 ---

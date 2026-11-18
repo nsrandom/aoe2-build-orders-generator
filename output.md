@@ -47,10 +47,14 @@ Because build order guides can be long, **every section MUST be collapsible**:
   - Provide an **Expand all sections / Collapse all sections** button (`.toggle-all-btn` with `aria-expanded="true"`) in each variant header that toggles all `<details class="phase-block">` elements in that tab and stays synchronized via a capturing `toggle` listener.
 
 ### 2.4 Interactive Strategy Comparison & Resource Bank Charts
-- **Strategy Comparison Population Chart (Top Section):**
+- **Strategy Comparison Population Chart & Milestone Table (Top Section):**
   - Compares all $N$ strategies/variants on a single responsive `<svg class="strategy-chart-svg">` population chart from `00:00` through the maximum simulation timestamp.
   - Each strategy uses a distinct color: **Villager population** is plotted as a **solid** line and **Military population** as a **dashed** line (`stroke-dasharray`) of the same color.
   - Interactive checkboxes allow toggling **each strategy** on/off as well as toggling **Villagers**, **Military**, and **Total pop (only)** population curves globally (selecting **Total pop (only)** deselects Villagers/Military, unselecting it re-selects both Villagers and Military, and selecting either Villagers or Military deselects **Total pop (only)**), with an interactive hover readout showing per-strategy `Vils / Military` or `Total pop` counts at any timestamp.
+  - **Multi-Strategy Comparison Table (Below the Chart):** For builds with multiple strategies (`len(docs) > 1`), render a `.strategy-comp-table` directly below the population chart inside the `Strategy Comparison` section comparing all strategies across **Feudal Age**, **Castle Age**, and **Imperial Age** arrival (**when each age is reached**, not when clicked) on three dimensions per age:
+    1. **Time Reached** (`MM:SS` when the age completes)
+    2. **Villagers** (villager count at age arrival)
+    3. **Military** (total military count and unit breakdown at age arrival, or `—` if an age is not reached)
 - **Resources Bank Over Time Chart (Per Variant Tab):**
 - Each variant tab includes a collapsible **Resources Bank Over Time** section containing a responsive inline `<svg class="resource-chart-svg">` chart:
   - **Series:** Plots `Food`, `Wood`, `Gold`, and `Stone` stockpiles from `00:00` through the end of the build using `doc.resource_timeline` (sampled every `10s` plus every build row event, or extracted automatically from `doc.rows`).

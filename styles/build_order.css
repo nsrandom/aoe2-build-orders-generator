@@ -836,3 +836,60 @@ tr:nth-child(even) {
     display: inline-block;
     vertical-align: middle;
 }
+
+/* Strategy Comparison Milestone Table (multi-strategy builds) */
+.comp-table-wrap {
+    margin-top: 14px;
+}
+
+.strategy-comp-table tbody tr:nth-child(even) {
+    background: transparent;
+}
+
+.strategy-comp-table tbody tr.comp-age-group-alt {
+    background: var(--row-even);
+}
+
+.strategy-comp-table tbody tr.comp-age-start:not(:first-child) > * {
+    border-top: 2px solid var(--border-strong);
+}
+
+.comp-col-age,
+.comp-col-metric,
+.comp-age-cell,
+.comp-metric-cell {
+    white-space: nowrap;
+    width: 1%;
+}
+
+.comp-age-cell {
+    background: var(--th-bg);
+    vertical-align: middle;
+    text-align: center;
+}
+
+.comp-metric-cell {
+    font-weight: 600;
+    color: var(--muted);
+}
+
+.comp-strat-hdr {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.comp-strat-hdr .swatch {
+    flex-shrink: 0;
+}
+
+.comp-mil-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.comp-mil-cell .army-badge {
+    margin: 0;
+}

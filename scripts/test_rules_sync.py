@@ -144,6 +144,43 @@ def main() -> None:
         castle_sec = out_html.split("Castle Age</span>")[1].split("</details>")[0]
         assert "Food Villagers Breakdown" not in dark_sec and "Total" not in dark_sec and ">Sheep " in dark_sec
         assert "Food Villagers Breakdown" in castle_sec and "Total" in castle_sec
+        assert '<table class="strategy-comp-table">' not in out_html
+
+        # Output rule 2.4: Multi-strategy Strategy Comparison table placed below chart
+        doc_a = BuildOrderDocument(
+            name="Multi",
+            civilization="Generic",
+            variant_label="Strat A",
+            description="Strat A",
+            rows=[
+                DetailedBuildRow("19 (20)", "07:05", "Feudal Transition", "Click Feudal Age", 14, 4, 1, 0, 0, 100, 0, 200, "", sheep_vils=14, army_counts={"scout": 1}),
+                DetailedBuildRow("19 (23)", "09:15", "Feudal Age", "Reach Feudal Age", 10, 7, 2, 0, 100, 150, 50, 200, "", farm_vils=10, army_counts={"scout": 1, "militia": 3}),
+                DetailedBuildRow("37 (41)", "16:45 – 19:25", "Castle Transition", "Reach Castle Age!", 15, 12, 10, 0, 400, 300, 300, 200, "", farm_vils=15, army_counts={"scout": 1, "maa": 3}),
+                DetailedBuildRow("38–55 (42–65)", "19:25 – 27:11", "Castle Age", "2-Stable Knights", 25, 16, 14, 0, 200, 200, 200, 200, "", farm_vils=25, army_counts={"scout": 1, "maa": 3, "knight": 27}),
+            ],
+            rts_steps=[RTSOverlayStep(19, 1, 4, 14, 1, 0, ["test"])],
+        )
+        doc_b = BuildOrderDocument(
+            name="Multi",
+            civilization="Generic",
+            variant_label="Strat B",
+            description="Strat B",
+            rows=[
+                DetailedBuildRow("21 (22)", "07:55", "Feudal Transition", "Click Feudal Age", 15, 5, 1, 0, 0, 100, 0, 200, "", sheep_vils=15, army_counts={"scout": 1}),
+                DetailedBuildRow("21 (22)", "10:05", "Feudal Age", "Queue Vil", 13, 6, 2, 0, 100, 150, 50, 200, "", farm_vils=13, army_counts={"scout": 1}),
+                DetailedBuildRow("36 (44)", "19:50", "Castle Age", "Crossbowman", 16, 12, 8, 0, 200, 200, 200, 200, "", farm_vils=16, army_counts={"scout": 1, "archer": 8}),
+                DetailedBuildRow("80 (130)", "35:10", "Imperial Age", "Bracer", 38, 22, 20, 0, 400, 400, 400, 200, "", farm_vils=38, army_counts={"crossbow": 40, "knight": 10}),
+            ],
+            rts_steps=[RTSOverlayStep(21, 1, 5, 15, 1, 0, ["test"])],
+        )
+        multi_html = export_build_order_html([doc_a, doc_b], "Multi", Path(tmpd) / "multi.html").read_text()
+        comp_sec = multi_html.split("strategy-comp-block")[1].split("</details>")[0]
+        assert '<table class="strategy-comp-table">' in comp_sec
+        assert comp_sec.index('id="strategy-comp-chart"') < comp_sec.index('class="strategy-comp-table"')
+        table_html = comp_sec.split('class="strategy-comp-table"')[1]
+        assert "09:15" in table_html and "19:25" in table_html and "07:05" not in table_html and "16:45" not in table_html
+        assert "3 MAA · 1 Scout" in table_html and "40 Xbows · 10 Knights" in table_html
+        assert "&mdash;" in table_html  # Strat A never reached Imperial Age
 
     # Verify all build generators produce villager ranges for multi-vil rows across all phases
     # and end-of-range resource allocation counts matching the ending villager count.
@@ -151,14 +188,17 @@ def main() -> None:
     sys.path.insert(0, str(builds_root / "bohemians_arena_fc_hand_cannons"))
     sys.path.insert(0, str(builds_root / "dravidian_maa_into_archers"))
     sys.path.insert(0, str(builds_root / "italians_arena_fc_genoese"))
+    sys.path.insert(0, str(builds_root / "lithuanians_maa_into_knights"))
     from generate_bohemians_arena_fc_hand_cannons import run_bohemians_1tc_fast_hc
     from generate_dravidians_maa import run_dravidians_path
     from generate_italians_arena_fc_genoese import run_italians_arena_strategy
+    from generate_lithuanians_maa_into_knights import run_lithuanians_path
 
     generated_docs = [
         run_bohemians_1tc_fast_hc(record_outputs=True)[0],
         *(run_dravidians_path(pk, pk, record_outputs=True)[0] for pk in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram", "3tc_boom_ele_archer")),
         *(run_italians_arena_strategy(st, record_outputs=True)[0] for st in ("1tc_push", "3tc_balanced")),
+        *(run_lithuanians_path(pk, pk, record_outputs=True)[0] for pk in ("1tc_fast_push", "1tc_wb_into_3tc")),
     ]
     for gdoc in generated_docs:
         prev_v = 3

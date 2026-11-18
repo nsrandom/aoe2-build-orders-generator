@@ -62,6 +62,20 @@ RTS_ICONS: Dict[str, str] = {
     "ballistics": "@university/Ballistics_aoe2DE.png@",
     "chemistry": "@university/Chemistry_aoe2DE.png@",
     "light_cavalry": "@stable/Lightcavalry_aoe2DE.png@",
+    "knight": "@stable/Knight_aoe2DE.png@",
+    "cavalier": "@stable/Cavalier_aoe2DE.png@",
+    "paladin": "@stable/Paladin_aoe2DE.png@",
+    "bloodlines": "@stable/BloodlinesDE.png@",
+    "husbandry": "@stable/HusbandryDE.png@",
+    "winged_hussar": "@stable/Winged-hussar_upgrade.png@",
+    "leitis": "@unique_unit/Leitisicon.png@",
+    "forging": "@blacksmith/Forging_aoe2de.png@",
+    "iron_casting": "@blacksmith/IronCastingDE.png@",
+    "scale_barding": "@blacksmith/ScaleBardingArmorDE.png@",
+    "chain_barding": "@blacksmith/ChainBardingDE.png@",
+    "plate_barding": "@blacksmith/PlateBardingArmorDE.png@",
+    "conscription": "@castle/ConscriptionDE.png@",
+    "two_man_saw": "@lumber_camp/TwoManSawDE.png@",
     "battering_ram": "@siege_workshop/Battering_ram_aoe2DE.png@",
     "armored_elephant": "@siege_workshop/Armored_elephant_aoe2DE.png@",
     "trebuchet": "@castle/Trebuchet_aoe2DE.png@",
@@ -190,6 +204,11 @@ _UNIT_DISPLAY_NAMES: Dict[str, Tuple[str, str]] = {
     "skirmisher": ("Skirm", "Skirms"),
     "genoese": ("Genoese", "Genoese"),
     "light_cav": ("Light Cav", "Light Cav"),
+    "winged_hussar": ("Winged Hussar", "Winged Hussars"),
+    "knight": ("Knight", "Knights"),
+    "cavalier": ("Cavalier", "Cavaliers"),
+    "paladin": ("Paladin", "Paladins"),
+    "leitis": ("Leitis", "Leitis"),
     "monk": ("Monk", "Monks"),
     "battering_ram": ("Ram", "Rams"),
     "mangonel": ("Mangonel", "Mangonels"),
@@ -201,22 +220,34 @@ _UNIT_DISPLAY_NAMES: Dict[str, Tuple[str, str]] = {
 }
 
 
-def format_army_distribution(army_counts: Dict[str, int]) -> str:
+def format_army_distribution(
+    army_counts: Dict[str, int],
+    include_starting_scout: bool = False,
+) -> str:
     """
     Formats unit counts into a compact distribution string, e.g. '38 Genoese · 4 Light Cav'.
-    Omits the single starting Scout ('scout' == 1) so only produced/upgraded military units are listed.
+    By default omits the single starting Scout ('scout' == 1) so only produced/upgraded military
+    units are listed; set include_starting_scout=True to include it (placed at the end when
+    other units are present).
     """
     if not army_counts:
         return ""
     parts: List[str] = []
+    trailing_scout: Optional[str] = None
     for key, cnt in army_counts.items():
         if not cnt or cnt <= 0:
             continue
         if key.lower() == "scout" and cnt == 1:
+            if not include_starting_scout:
+                continue
+            singular, _ = _UNIT_DISPLAY_NAMES.get("scout", ("Scout", "Scouts"))
+            trailing_scout = f"1 {singular}"
             continue
         singular, plural = _UNIT_DISPLAY_NAMES.get(key.lower(), (key, key))
         label = singular if cnt == 1 else plural
         parts.append(f"{cnt} {label}")
+    if trailing_scout:
+        parts.append(trailing_scout)
     return " · ".join(parts)
 
 
@@ -517,7 +548,7 @@ def compress_build_rows(rows: List[DetailedBuildRow]) -> List[DetailedBuildRow]:
 
         # 3. Check consecutive military unit queue rows
         u_re = re.compile(
-            r"^Queue (Light Cavalry|Genoese Crossbowman|Monk|Battering Ram|Archer|Militia) #(\d+)(?:[–-]#?(\d+))?(?: \(\d+ units\))? at ([^()]+) \((.+)\)\.$"
+            r"^Queue (Light Cavalry|Knight|Cavalier|Paladin|Leitis|Genoese Crossbowman|Monk|Battering Ram|Archer|Militia) #(\d+)(?:[–-]#?(\d+))?(?: \(\d+ units\))? at ([^()]+) \((.+)\)\.$"
         )
         um1 = u_re.match(prev.action.strip())
         um2 = u_re.match(curr.action.strip())
@@ -614,11 +645,183 @@ _STRATEGY_PALETTE = [
 ]
 
 
+def _extract_age_arrival_info(
+    doc: BuildOrderDocument,
+    age_key: str,
+) -> Optional[Dict[str, object]]:
+    """
+    Extracts exact arrival metrics (when the age is reached, not clicked) for
+    'Feudal', 'Castle', or 'Imperial':
+      - t: arrival time in seconds
+      - ts: formatted 'MM:SS' arrival timestamp
+      - vils: villager count at arrival
+      - mil: total military count at arrival
+      - dist: unit breakdown string (including starting Scout if alive)
+    Returns None if the build never reaches the specified age.
+    """
+    target_age = f"{age_key} Age"
+    trans_age = f"{age_key} Transition"
+    reach_pat = re.compile(
+        rf"\breach(?:ed)?\s+{age_key}\s+age\b|\barriv(?:e|es|ed)\s+{age_key}\s+age\b",
+        re.I,
+    )
+
+    def _from_row(r: DetailedBuildRow, use_start: bool = False) -> Dict[str, object]:
+        parts = [p.strip() for p in re.split(r"\s*[–-]\s*", r.timestamp.strip()) if p.strip()]
+        ts = parts[0] if (use_start and parts) else (parts[-1] if parts else r.timestamp.strip())
+        t_s = _parse_mmss_to_sec(ts)
+        vils = r.food_vils + r.wood_vils + r.gold_vils + r.stone_vils
+        mil_total = sum(cnt for cnt in r.army_counts.values() if cnt and cnt > 0)
+        return {
+            "t": t_s,
+            "ts": ts,
+            "vils": vils,
+            "mil": mil_total,
+            "dist": format_army_distribution(r.army_counts, include_starting_scout=True),
+        }
+
+    # 1. Prefer a point-in-time arrival row inside `<Age> Age`
+    for r in doc.rows:
+        if r.age == target_age:
+            parts = [p.strip() for p in re.split(r"\s*[–-]\s*", r.timestamp.strip()) if p.strip()]
+            is_point = len(parts) <= 1 or parts[0] == parts[-1]
+            if is_point or reach_pat.search(r.action):
+                return _from_row(r, use_start=not is_point)
+
+    # 2. Otherwise check `<Age> Transition` rows that explicitly record reaching the age
+    trans_rows = [r for r in doc.rows if r.age == trans_age]
+    for r in reversed(trans_rows):
+        if reach_pat.search(r.action):
+            return _from_row(r, use_start=False)
+
+    # 3. Fallback if `<Age> Age` starts with a multi-minute macro block: use its start time
+    #    paired with the matching end-of-transition row or resource_timeline snapshot.
+    for r in doc.rows:
+        if r.age == target_age:
+            parts = [p.strip() for p in re.split(r"\s*[–-]\s*", r.timestamp.strip()) if p.strip()]
+            ts = parts[0] if parts else r.timestamp.strip()
+            t_s = _parse_mmss_to_sec(ts)
+            if trans_rows and _parse_mmss_to_sec(trans_rows[-1].timestamp) == t_s:
+                return _from_row(trans_rows[-1], use_start=False)
+            if doc.resource_timeline:
+                pt = min(doc.resource_timeline, key=lambda p: abs(int(p["t"]) - t_s))
+                raw_army = re.sub(r"^Army:\s*", "", str(pt.get("army", ""))).strip()
+                return {
+                    "t": t_s,
+                    "ts": ts,
+                    "vils": int(pt["vils"]),
+                    "mil": int(pt["mil"]),
+                    "dist": raw_army,
+                }
+            return _from_row(r, use_start=True)
+
+    return None
+
+
+def _build_strategy_comparison_table_html(
+    docs: List[BuildOrderDocument],
+    series_data: List[Dict[str, object]],
+) -> str:
+    """
+    Renders a cross-strategy milestone comparison table below the Strategy Comparison chart
+    when a build has multiple strategies (len(docs) > 1). Compares Feudal, Castle, and
+    Imperial arrival times (when reached, not clicked), villager counts, and military
+    counts with unit breakdowns.
+    """
+    if len(docs) <= 1 or len(series_data) <= 1:
+        return ""
+
+    strat_cols = []
+    strat_ages: List[Dict[str, Optional[Dict[str, object]]]] = []
+    for s in series_data:
+        doc = docs[int(s["idx"])]
+        col_hdr = (
+            f'<th>'
+            f'<span class="comp-strat-hdr">'
+            f'<span class="swatch" style="background:{s["color"]}"></span>'
+            f'<span>{html.escape(str(s["label"]))}</span>'
+            f'</span>'
+            f'</th>'
+        )
+        strat_cols.append(col_hdr)
+        strat_ages.append(
+            {
+                "Feudal": _extract_age_arrival_info(doc, "Feudal"),
+                "Castle": _extract_age_arrival_info(doc, "Castle"),
+                "Imperial": _extract_age_arrival_info(doc, "Imperial"),
+            }
+        )
+
+    body_rows: List[str] = []
+    for age_idx, (age_key, age_label) in enumerate(
+        (("Feudal", "Feudal Age"), ("Castle", "Castle Age"), ("Imperial", "Imperial Age"))
+    ):
+        alt_cls = " comp-age-group-alt" if age_idx % 2 == 1 else ""
+        time_cells = []
+        vil_cells = []
+        mil_cells = []
+        for s_ages in strat_ages:
+            info = s_ages[age_key]
+            if info is None:
+                time_cells.append('<td class="mono zero">&mdash;</td>')
+                vil_cells.append('<td class="mono zero">&mdash;</td>')
+                mil_cells.append('<td class="mono zero">&mdash;</td>')
+                continue
+            time_cells.append(f'<td class="mono">{html.escape(str(info["ts"]))}</td>')
+            vil_cells.append(f'<td class="mono">{int(info["vils"])}</td>')
+            mil_cnt = int(info["mil"])
+            dist = str(info["dist"]).strip()
+            if dist:
+                mil_cells.append(
+                    f'<td><div class="comp-mil-cell">'
+                    f'<strong class="mono">{mil_cnt}</strong>'
+                    f'<span class="army-badge">{html.escape(dist)}</span>'
+                    f'</div></td>'
+                )
+            else:
+                mil_cells.append(f'<td class="mono"><strong>{mil_cnt}</strong></td>')
+
+        body_rows.append(
+            f'<tr class="comp-age-start{alt_cls}">'
+            f'<th rowspan="3" scope="rowgroup" class="comp-age-cell">'
+            f'<span class="badge">{age_label}</span>'
+            f'</th>'
+            f'<td class="comp-metric-cell">Time Reached</td>'
+            f'{"".join(time_cells)}'
+            f'</tr>'
+            f'<tr class="{alt_cls.strip()}">'
+            f'<td class="comp-metric-cell">Villagers</td>'
+            f'{"".join(vil_cells)}'
+            f'</tr>'
+            f'<tr class="{alt_cls.strip()}">'
+            f'<td class="comp-metric-cell">Military</td>'
+            f'{"".join(mil_cells)}'
+            f'</tr>'
+        )
+
+    return f"""
+            <div class="comp-table-wrap table-wrap" tabindex="0" role="region" aria-label="Strategy milestone comparison table">
+                <table class="strategy-comp-table">
+                    <thead>
+                        <tr>
+                            <th class="comp-col-age">Age Reached</th>
+                            <th class="comp-col-metric">Metric</th>
+                            {''.join(strat_cols)}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {''.join(body_rows)}
+                    </tbody>
+                </table>
+            </div>"""
+
+
 def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
     """
     Renders the collapsible Strategy Comparison section comparing all strategies
     using population line charts: solid = villager pop, dashed = military pop (same color per strategy),
-    with checkboxes to show/hide each strategy and Villager/Military lines plus hover readout.
+    with checkboxes to show/hide each strategy and Villager/Military lines plus hover readout,
+    followed by a milestone comparison table when multiple strategies are present.
     """
     if not docs:
         return ""
@@ -760,6 +963,7 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
     )
 
     strat_cnt = len(series_data)
+    comp_table_html = _build_strategy_comparison_table_html(docs, series_data)
     return f"""
     <details open class="phase-block strategy-comp-block">
         <summary class="phase-title">
@@ -812,7 +1016,7 @@ def _build_strategy_comparison_html(docs: List[BuildOrderDocument]) -> str:
                     <line class="chart-hover-line" id="strategy-comp-chart-hline" x1="{pad_l}" y1="{pad_t}" x2="{pad_l}" y2="{height - pad_b}" />
                     {''.join(hover_dots_html)}
                 </svg>
-            </div>
+            </div>{comp_table_html}
         </div>
     </details>
     """
@@ -882,15 +1086,15 @@ def _build_resource_chart_html(doc: BuildOrderDocument, tab_idx: int, icon_dir_r
             label = "Castle Click"
         elif "CLICK IMPERIAL" in act_up:
             label = "Imp Click"
-        elif "REACHED FEUDAL" in act_up or r.age == "Feudal Age":
-            label = "Feudal Age"
-        elif "REACHED CASTLE" in act_up or r.age == "Castle Age":
-            label = "Castle Age"
-        elif "REACHED IMPERIAL" in act_up or r.age == "Imperial Age":
-            label = "Imp Age"
         if label and label not in seen_ms:
             seen_ms.add(label)
             milestones.append((t_s, label))
+    for age_key, age_lbl in (("Feudal", "Feudal Age"), ("Castle", "Castle Age"), ("Imperial", "Imp Age")):
+        info = _extract_age_arrival_info(doc, age_key)
+        if info is not None and age_lbl not in seen_ms:
+            seen_ms.add(age_lbl)
+            milestones.append((int(info["t"]), age_lbl))
+    milestones.sort(key=lambda item: item[0])
 
     milestone_svg = []
     lanes_y = [20, 38, 56, 74]
