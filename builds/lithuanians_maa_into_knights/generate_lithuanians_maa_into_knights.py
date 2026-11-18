@@ -574,7 +574,7 @@ def run_lithuanians_path(
                     sim.tc_busy_until[0] = t + 25
                     sim.tc_action[0] = f"vil_{next_v}"
                     next_v += 1
-                    trans_upgs = "Build Stable #2 (-175W, ready before arrival)"
+                    trans_upgs = "Build Stable #2 (-175W, ready before arrival)\nResearch Gold Mining (-100F, -75W)"
                     if not is_fast:
                         trans_upgs += "\nResearch Scale Barding (-150F) & Bloodlines (-150F, -100G)"
                     add_row(
@@ -589,7 +589,7 @@ def run_lithuanians_path(
                     milestones["imp_reached_s"] = t
                     milestones["imp_reached_str"] = sim.fmt_time()
                     extra_imp = (
-                        "Drop TC #2 & TC #3 (+100F each)"
+                        "Research Heavy Plow (-125F, -125W) & Drop TC #2 & TC #3 (+100F each)"
                         if is_fast
                         else "Finish Chemistry & add 4th Stable (-175W)"
                     )

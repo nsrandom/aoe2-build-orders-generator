@@ -1076,11 +1076,12 @@ def run_dravidians_path(
                 if sim.age == 4:
                     if not imp_loop_logged:
                         imp_loop_logged = True
+                        eco_imp = "\nResearch Two-Man Saw (-300F, -200W)" if path_key == "1tc_xbow_lc_ram" else ""
                         add_row(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Imperial Age",
-                            "Research Imperial unit & Blacksmith upgrades\nProduce main army + Armored/Siege Elephants",
+                            f"Research Imperial unit & Blacksmith upgrades{eco_imp}\nProduce main army + Armored/Siege Elephants",
                             f"+200W Dravidians bonus; Imperial reached before 40:00 at {sim.fmt_time()} with {len(sim.vils)} vils (<500–1000 float).",
                         )
                     if path_key in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram") and queue_upg("arbalester"):

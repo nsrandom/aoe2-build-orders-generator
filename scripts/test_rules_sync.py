@@ -182,8 +182,41 @@ def main() -> None:
         assert "3 MAA · 1 Scout" in table_html and "40 Xbows · 10 Knights" in table_html
         assert "&mdash;" in table_html  # Strat A never reached Imperial Age
 
-    # Verify all build generators produce villager ranges for multi-vil rows across all phases
-    # and end-of-range resource allocation counts matching the ending villager count.
+    # Verify all build generators produce villager ranges for multi-vil rows across all phases,
+    # end-of-range resource allocation counts matching the ending villager count, and explicit
+    # listing of every eco upgrade researched/granted in the simulation.
+    eco_upgrades = (
+        "loom",
+        "wheelbarrow",
+        "hand cart",
+        "double-bit axe",
+        "bow saw",
+        "two-man saw",
+        "horse collar",
+        "heavy plow",
+        "crop rotation",
+        "gold mining",
+        "gold shaft mining",
+        "stone mining",
+        "stone shaft mining",
+    )
+    tracked_upgs: list[str] = []
+    last_sim_ref: list[BuildOrderSimulator] = []
+    orig_sim_init = BuildOrderSimulator.__init__
+    orig_sim_qu = BuildOrderSimulator.queue_upgrade
+
+    def _spy_init(self, *a, **kw):
+        last_sim_ref.clear()
+        last_sim_ref.append(self)
+        return orig_sim_init(self, *a, **kw)
+
+    def _spy_qu(self, name, complete_time):
+        tracked_upgs.append(name.lower())
+        return orig_sim_qu(self, name, complete_time)
+
+    BuildOrderSimulator.__init__ = _spy_init
+    BuildOrderSimulator.queue_upgrade = _spy_qu
+
     builds_root = Path(__file__).resolve().parent.parent / "builds"
     sys.path.insert(0, str(builds_root / "bohemians_arena_fc_hand_cannons"))
     sys.path.insert(0, str(builds_root / "dravidian_maa_into_archers"))
@@ -194,12 +227,30 @@ def main() -> None:
     from generate_italians_arena_fc_genoese import run_italians_arena_strategy
     from generate_lithuanians_maa_into_knights import run_lithuanians_path
 
-    generated_docs = [
-        run_bohemians_1tc_fast_hc(record_outputs=True)[0],
-        *(run_dravidians_path(pk, pk, record_outputs=True)[0] for pk in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram", "3tc_boom_ele_archer")),
-        *(run_italians_arena_strategy(st, record_outputs=True)[0] for st in ("1tc_push", "3tc_balanced")),
-        *(run_lithuanians_path(pk, pk, record_outputs=True)[0] for pk in ("1tc_fast_push", "1tc_wb_into_3tc")),
+    gen_calls = [
+        lambda: run_bohemians_1tc_fast_hc(record_outputs=True)[0],
+        *(lambda _pk=pk: run_dravidians_path(_pk, _pk, record_outputs=True)[0] for pk in ("1tc_xbow_lc_ram", "1tc_xbow_ls_spear_ram", "3tc_boom_ele_archer")),
+        *(lambda _st=st: run_italians_arena_strategy(_st, record_outputs=True)[0] for st in ("1tc_push", "3tc_balanced")),
+        *(lambda _pk=pk: run_lithuanians_path(_pk, _pk, record_outputs=True)[0] for pk in ("1tc_fast_push", "1tc_wb_into_3tc")),
     ]
+    generated_docs = []
+    try:
+        for call in gen_calls:
+            tracked_upgs.clear()
+            gdoc = call()
+            generated_docs.append(gdoc)
+            sim_inst = last_sim_ref[0]
+            all_actions = "\n".join(r.action.lower() for r in gdoc.rows)
+            used_eco = set(tracked_upgs) | {u.lower() for u in sim_inst.upgrades}
+            for eu in eco_upgrades:
+                if eu in used_eco:
+                    assert eu in all_actions, (
+                        f"Eco upgrade {eu!r} used in simulation of {gdoc.name} ({gdoc.variant_label}) "
+                        f"is missing from HTML row actions"
+                    )
+    finally:
+        BuildOrderSimulator.__init__ = orig_sim_init
+        BuildOrderSimulator.queue_upgrade = orig_sim_qu
     for gdoc in generated_docs:
         prev_v = 3
         for idx, r in enumerate(gdoc.rows):

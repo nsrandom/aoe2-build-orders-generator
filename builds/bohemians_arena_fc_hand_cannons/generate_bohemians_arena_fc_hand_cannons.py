@@ -684,7 +684,7 @@ def run_bohemians_1tc_fast_hc(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             sim.fmt_time(),
                             "Feudal Age",
-                            f"Queue +2 Feudal Vils -> Wood\n3 Straggler/Wood vils build Market (-175W, {mkt_build}s) -> return to Wood\n1 Straggler/Wood vil builds Blacksmith (-{bs_cost.wood:.0f}W, 40s) -> return to Wood",
+                            f"Queue +2 Feudal Vils -> Wood\nFree Gold Mining & Stone Mining (+15%, civ bonus)\n3 Straggler/Wood vils build Market (-175W, {mkt_build}s) -> return to Wood\n1 Straggler/Wood vil builds Blacksmith (-{bs_cost.wood:.0f}W, 40s) -> return to Wood",
                             "Free Gold/Stone Mining (+15%); Bohemians save 100W on Blacksmith + Mining Camp techs; 110G ready -> sell 100S for +91G (saving 200W).",
                         )
 
@@ -710,7 +710,10 @@ def run_bohemians_1tc_fast_hc(
                         sim.tc_busy_until[0] = t + 25
                         sim.tc_action[0] = f"vil_{len(sim.vils)+1}"
 
-                    castle_acts = ["Queue Villager -> Wood / Farms"]
+                    castle_acts = [
+                        "Queue Villager -> Wood / Farms",
+                        "Free Gold Shaft Mining & Stone Shaft Mining (+15%, civ bonus)",
+                    ]
                     if sim.bank.food >= 200 and sim.bank.wood >= 100 and queue_upg("bow saw", res_food=50):
                         bow_saw_started = True
                         castle_acts.append("Research Bow Saw (-150F, -100W)")

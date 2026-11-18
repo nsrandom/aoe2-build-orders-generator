@@ -714,7 +714,7 @@ def run_italians_arena_strategy(
                     trans_txt = (
                         "3 Wood/Farm vils build TC #2 & TC #3 (-275W, -100S each) -> return\nContinue Genoese + Light Cavalry + Battering Rams"
                         if is_1tc
-                        else f"Continue 4-TC Vils (to {len(sim.vils)} vils)\nAdd Forward Castles / Siege Workshop #2 (from Wood) & scale military"
+                        else f"Continue 4-TC Vils (to {len(sim.vils)} vils)\nResearch Heavy Plow (-125F, -125W), Stone Shaft Mining (-200F, -150W) & Gold Shaft Mining (-200F, -150W)\nAdd Forward Castles / Siege Workshop #2 (from Wood) & scale military"
                     )
                     add_row(
                         f"{len(sim.vils)} ({sim.total_pop()})",
@@ -1079,7 +1079,7 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                         "Castle Age",
-                        f"Train {sim.military_units['genoese']} Genoese Crossbowmen + {sim.military_units['light_cav']} Light Cavalry\nResearch Light Cavalry + Blacksmith & Bloodlines upgrades\nQueue TC #1 Vils -> Farms / Gold / Wood",
+                        f"Train {sim.military_units['genoese']} Genoese Crossbowmen + {sim.military_units['light_cav']} Light Cavalry\nResearch Bow Saw (-150F, -100W), Light Cavalry + Blacksmith & Bloodlines upgrades\nQueue TC #1 Vils -> Farms / Gold / Wood",
                         "~20 army defense setup complete -> expand to 3 TCs.",
                     )
 
@@ -1110,7 +1110,7 @@ def run_italians_arena_strategy(
                         f"{len(sim.vils)} ({sim.total_pop()})",
                         f"{sim.fmt_time(army20_t or t)} – {sim.fmt_time()}",
                         "Castle Age",
-                        f"Pause military briefly\n3 Wood/Farm vils build TC #2 (-275W, -100S, 90s) -> return\n3 Wood/Farm vils build TC #3 (-275W, -100S, 90s) -> return\nAssign 3-TC Vils -> Farms (to {f_cnt_s2}+)\nResearch Wheelbarrow (-175F, -50W)",
+                        f"Pause military briefly\n3 Wood/Farm vils build TC #2 (-275W, -100S, 90s) -> return\n3 Wood/Farm vils build TC #3 (-275W, -100S, 90s) -> return\nAssign 3-TC Vils -> Farms (to {f_cnt_s2}+)\nResearch Wheelbarrow (-175F, -50W) & Stone Mining (-100F, -75W)",
                         "3-TC boom established -> resume & maximize army.",
                     )
 
@@ -1265,7 +1265,7 @@ def run_italians_arena_strategy(
                                 "",
                                 f"{loop2_start} – {sim.fmt_time()}",
                                 "Castle Age",
-                                "Send 1 Wood/Farm Loom vil forward (60s walk) -> Build Forward Siege Workshop (-200W)\nTrain 3–4 Battering Rams (-160W, -75G each)\n1 Wood/Farm vil builds Stable #2 (-175W) -> Wood\nResearch Heavy Plow (-125F, -125W)\nContinue Genoese + Light Cavalry & TC #1 Vils -> Farms / Wood / Gold (bank 850F / 680G)",
+                                "Send 1 Wood/Farm Loom vil forward (60s walk) -> Build Forward Siege Workshop (-200W)\nTrain 3–4 Battering Rams (-160W, -75G each)\n1 Wood/Farm vil builds Stable #2 (-175W) -> Wood\nResearch Heavy Plow (-125F, -125W) & Gold Shaft Mining (-200F, -150W)\nContinue Genoese + Light Cavalry & TC #1 Vils -> Farms / Wood / Gold (bank 850F / 680G)",
                                 f"30+ Army Forward Siege Push ({format_army_counts(sim.military_units).replace('Army: ', '')}); keep 1 TC until Imperial click.",
                             )
                         elif not is_1tc and not castle_loop2_logged:
@@ -1495,7 +1495,7 @@ def run_italians_arena_strategy(
                             f"{len(sim.vils)} ({sim.total_pop()})",
                             f"{sim.fmt_time(castle_reached_t or t)} – {sim.fmt_time()}",
                             "Castle Age",
-                            f"1 Wood/Straggler/Gold vil builds Monastery (-175W); train 2 Monks (-100G each)\nMove 2 Stone vils -> Wood after Defensive Castle finishes\nTrain Genoese Crossbowmen + Light Cavalry & Continue TC #1 Vils -> Farms / Wood / Gold\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G)",
+                            f"1 Wood/Straggler/Gold vil builds Monastery (-175W); train 2 Monks (-100G each)\nMove 2 Stone vils -> Wood after Defensive Castle finishes\nResearch Wheelbarrow (-175F, -50W) & Bow Saw (-150F, -100W)\nTrain Genoese Crossbowmen + Light Cavalry & Continue TC #1 Vils -> Farms / Wood / Gold\n1 Wood/Straggler vil builds University (-200W) -> Research Ballistics (-{bal_cost.wood:.0f}W, -{bal_cost.gold:.0f}G)",
                             "Monk #1 secures Relic (+30G/min); Italians -25% University techs; Ballistics prioritized at 20+ Genoese ahead of extra Stables/SW per rule 6.4.",
                         )
 
@@ -1647,11 +1647,16 @@ def run_italians_arena_strategy(
                 if len(sim.vils) > last_logged_vils + 1
                 else ""
             )
+            imp_eco_line = (
+                "Research Hand Cart (-300F, -200W) & Two-Man Saw (-300F, -200W)"
+                if is_1tc
+                else "Research Hand Cart (-300F, -200W)"
+            )
             add_row(
                 f"{len(sim.vils)} ({sim.total_pop()})",
                 f"{sim.fmt_time(imp_reached_t or t)} – {sim.fmt_time()}",
                 "Imperial Age",
-                f"{imp_vil_line}Train Genoese Crossbowmen + Light Cavalry / Hussars + Trebuchets + Bombard Cannons\nContinue final Imperial upgrades",
+                f"{imp_vil_line}Train Genoese Crossbowmen + Light Cavalry / Hussars + Trebuchets + Bombard Cannons\n{imp_eco_line} & final Imperial upgrades",
                 f"Full Imperial composition online ({len(sim.vils)} Vils + {sum(sim.military_units.values())} Military = {sim.total_pop()} Pop): {format_army_counts(sim.military_units).replace('Army: ', '')}. Full upgrades complete (Elite Genoese, Hussar, Bracer, Ballistics, Chemistry, Pavise, Silk Road, Siege Engineers). Pre-click TC idle: {tc_pre_click_idle_s}s; unplanned TC idle: {tc_unplanned_idle_s}s.",
             )
             break
